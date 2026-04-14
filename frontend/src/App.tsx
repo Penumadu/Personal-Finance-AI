@@ -47,8 +47,8 @@ const App: React.FC = () => {
                 <DollarSign className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">FinanceAI</h1>
-                <p className="text-xs text-gray-500">Personal Finance Assistant</p>
+                <h1 className="text-xl font-bold text-gray-900">Srini Personal FinanceAI</h1>
+                <p className="text-xs text-gray-500">AI-Powered Financial Advisor</p>
               </div>
             </div>
             <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">

@@ -1,4 +1,4 @@
-# Personal Finance Assistant - Project Overview
+# Srini Personal FinanceAI - Project Overview
 
 ## 🎯 Vision
 
