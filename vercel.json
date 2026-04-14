@@ -1,7 +1,7 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "cd frontend && rm -rf node_modules && npm install && npm run build",
   "outputDirectory": "frontend/dist",
   "routes": [
-    { "src": "/(.*)", "dest": "/frontend/dist/index.html" }
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
