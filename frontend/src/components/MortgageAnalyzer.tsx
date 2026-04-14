@@ -1,7 +1,19 @@
 import React, { useState } from 'react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { TrendingUp, ArrowUpRight, AlertCircle, DollarSign, Percent, Home, Calculator } from 'lucide-react';
+import { TrendingUp, ArrowUpRight, AlertCircle, DollarSign, Percent, Home, Calculator, Save, Clock, ChevronRight, HelpCircle, Users, TrendingDown, X } from 'lucide-react';
 import Card from './ui/Card';
+
+interface SavedScenario {
+  id: string;
+  name: string;
+  date: string;
+  principal: string;
+  rate: string;
+  propertyValue: string;
+  monthlyPayment: string;
+  ltv: number;
+  equity: number;
+}
 
 const MortgageAnalyzer: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -15,13 +27,70 @@ const MortgageAnalyzer: React.FC = () => {
     loan_type: 'conventional'
   });
 
+  const [scenarioName, setScenarioName] = useState('');
   const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [savedScenarios, setSavedScenarios] = useState<SavedScenario[]>([
+    { id: '1', name: 'Primary Home Refi', date: '2026-04-10', principal: '320000', rate: '6.5', propertyValue: '450000', monthlyPayment: '2210', ltv: 71.1, equity: 130000 },
+    { id: '2', name: 'Investment Property', date: '2026-04-08', principal: '180000', rate: '7.25', propertyValue: '280000', monthlyPayment: '1450', ltv: 64.3, equity: 100000 }
+  ]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'analyze' | 'refinance'>('analyze');
+
+  const peopleAlsoAsk = [
+    { question: 'When should I refinance my mortgage?', answer: 'Generally when rates drop 0.5-0.75% below your current rate. Also consider if you plan to stay 2+ years to recoup closing costs.' },
+    { question: 'What is a good LTV ratio?', answer: 'Below 80% avoids PMI. Below 60% is considered excellent and may qualify for better rates.' },
+    { question: 'How much equity do I need to refinance?', answer: 'At least 5-20% equity (80-95% LTV). Some programs allow lower, but with higher rates or PMI.' },
+    { question: 'Should I do cash-out refinance?', answer: 'Useful for home improvements or debt consolidation, but increases your loan balance. Compare rates vs. HELOC.' }
+  ];
+
+  const refinanceTips = [
+    { title: 'Rate Drop Alert', detail: 'Rates dropped 0.25% this week. Consider locking now.' },
+    { title: '15-Year vs 30-Year', detail: '15-year saves $120K in interest but $500/mo more payment.' },
+    { title: 'Closing Costs', detail: 'Average $5,000-10,000. Roll into loan or pay upfront?' }
+  ];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const saveScenario = () => {
+    if (!scenarioName.trim()) return;
+    const ltv = (parseFloat(formData.current_principal) / parseFloat(formData.property_value)) * 100;
+    const equity = parseFloat(formData.property_value) - parseFloat(formData.current_principal);
+    
+    const newScenario: SavedScenario = {
+      id: Date.now().toString(),
+      name: scenarioName,
+      date: new Date().toISOString().split('T')[0],
+      principal: formData.current_principal,
+      rate: formData.interest_rate,
+      propertyValue: formData.property_value,
+      monthlyPayment: formData.monthly_payment,
+      ltv,
+      equity
+    };
+    
+    setSavedScenarios(prev => [newScenario, ...prev]);
+    setScenarioName('');
+  };
+
+  const loadScenario = (scenario: SavedScenario) => {
+    setFormData({
+      original_principal: scenario.principal,
+      current_principal: scenario.principal,
+      interest_rate: scenario.rate,
+      monthly_payment: scenario.monthlyPayment,
+      start_date: '2024-01-15',
+      term_months: '360',
+      property_value: scenario.propertyValue,
+      loan_type: 'conventional'
+    });
+    analyzeMortgage();
+  };
+
+  const deleteScenario = (id: string) => {
+    setSavedScenarios(prev => prev.filter(s => s.id !== id));
   };
 
   const analyzeMortgage = () => {
@@ -93,7 +162,7 @@ const MortgageAnalyzer: React.FC = () => {
             <Home className="w-6 h-6 text-blue-600" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Mortgage Analyzer</h2>
+<h2 className="text-2xl font-bold text-gray-900">Mortgage Analyzer</h2>
             <p className="text-gray-500">Analyze your mortgage and get refinancing recommendations</p>
           </div>
         </div>
@@ -110,7 +179,8 @@ const MortgageAnalyzer: React.FC = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Input Form */}
         <Card title={activeTab === 'analyze' ? 'Enter Your Mortgage Details' : 'Refinance Calculator'}>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -166,11 +236,12 @@ const MortgageAnalyzer: React.FC = () => {
             </div>
 
             <button onClick={activeTab === 'analyze' ? analyzeMortgage : calculateRefinance} disabled={loading} className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-              {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparentrounded-full animate-spin" /> : <><TrendingUp className="w-5 h-5" />{activeTab === 'analyze' ? 'Analyze Mortgage' : 'Calculate Refinance'}</>}
+              {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><TrendingUp className="w-5 h-5" />{activeTab === 'analyze' ? 'Analyze Mortgage' : 'Calculate Refinance'}</>}
             </button>
           </div>
         </Card>
 
+        {/* Middle Column - Results */}
         <div className="space-y-4">
           {analysisResult ? (
             <>
@@ -199,7 +270,7 @@ const MortgageAnalyzer: React.FC = () => {
               {/* Amortization Chart */}
               <Card title="Amortization Schedule" subtitle="Balance over time">
                 <div className="h-48">
-<ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={getAmortizationData()}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                       <XAxis dataKey="year" stroke="#6B7280" fontSize={10} />
@@ -237,7 +308,112 @@ const MortgageAnalyzer: React.FC = () => {
             </Card>
           )}
         </div>
+
+        {/* Right Column - People Also Ask & Refinance Tips */}
+        <div className="space-y-4">
+          {/* Refinance Quick Tips */}
+          {activeTab === 'refinance' && (
+            <Card title="Refinance Quick Tips" className="bg-gradient-to-br from-indigo-50 to-purple-50">
+              <div className="space-y-3">
+                {refinanceTips.map((tip, idx) => (
+                  <div key={idx} className="flex items-start gap-3 p-3 bg-white rounded-lg border border-indigo-100">
+<div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <TrendingDown className="w-4 h-4 text-indigo-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 text-sm">{tip.title}</h4>
+                      <p className="text-xs text-gray-600 mt-0.5">{tip.detail}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* People Also Ask */}
+          <Card title="People Also Ask" className="bg-white">
+            <div className="space-y-3">
+              {peopleAlsoAsk.map((item, idx) => (
+                <div key={idx} className="border-b border-gray-100 last:border-0 pb-3 last:pb-0">
+                  <button className="flex items-start gap-2 w-full text-left hover:bg-gray-50 p-2 -m-2 rounded-lg transition-colors">
+                    <HelpCircle className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-gray-900 text-sm">{item.question}</p>
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{item.answer}</p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-400 ml-auto flex-shrink-0" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
       </div>
+
+      {/* Saved Scenarios Section */}
+      <Card title="Your Saved Scenarios" subtitle="Scenarios saved in this session">
+        <div className="flex gap-3 mb-4">
+          <input
+            type="text"
+            placeholder="Name this scenario..."
+            value={scenarioName}
+            onChange={(e) => setScenarioName(e.target.value)}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          />
+          <button onClick={saveScenario} disabled={!scenarioName.trim()} className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2">
+            <Save className="w-4 h-4" />
+            Save Current
+          </button>
+        </div>
+
+        {savedScenarios.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {savedScenarios.map((scenario) => (
+              <div key={scenario.id} className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors group">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="font-semibold text-gray-900">{scenario.name}</h4>
+                    <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                      <Clock className="w-3 h-3" />
+                      {scenario.date}
+                    </p>
+                  </div>
+                  <button onClick={() => deleteScenario(scenario.id)} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-gray-500">Balance:</span>
+                    <span className="ml-1 font-medium">${parseFloat(scenario.principal).toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Rate:</span>
+                    <span className="ml-1 font-medium">{scenario.rate}%</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">LTV:</span>
+                    <span className="ml-1 font-medium">{scenario.ltv.toFixed(1)}%</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Equity:</span>
+                    <span className="ml-1 font-medium text-green-600">${scenario.equity.toLocaleString()}</span>
+                  </div>
+                </div>
+                <button onClick={() => loadScenario(scenario)} className="mt-3 w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                  <ChevronRight className="w-4 h-4" />
+                  Load Scenario
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-400">
+            <Users className="w-8 h-8 mx-auto mb-2" />
+            <p>No saved scenarios yet. Save your first one above!</p>
+          </div>
+        )}
+      </Card>
     </div>
   );
 };
