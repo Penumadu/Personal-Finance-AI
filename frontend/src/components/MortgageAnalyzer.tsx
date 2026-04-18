@@ -1,419 +1,588 @@
 import React, { useState } from 'react';
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { TrendingUp, ArrowUpRight, AlertCircle, DollarSign, Percent, Home, Calculator, Save, Clock, ChevronRight, HelpCircle, Users, TrendingDown, X } from 'lucide-react';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, AreaChart, Area, Legend } from 'recharts';
+import { TrendingUp, ArrowUpRight, AlertCircle, DollarSign, Percent, Home, Calculator, Save, Clock, ChevronRight, Building2, TrendingDown, Globe, Info, Leaf, BarChart3 } from 'lucide-react';
 import Card from './ui/Card';
 
-interface SavedScenario {
+interface Property {
   id: string;
   name: string;
-  date: string;
-  principal: string;
-  rate: string;
+  address: string;
   propertyValue: string;
+  currentBalance: string;
+  interestRate: string;
   monthlyPayment: string;
-  ltv: number;
-  equity: number;
+  originalAmount: string;
+  startDate: string;
+  termMonths: string;
+  loanType: 'fixed' | 'variable' | 'heloc';
+  renewalDate: string;
+  paymentFrequency: 'monthly' | 'biweekly' | 'accelerated';
 }
 
 const MortgageAnalyzer: React.FC = () => {
-  const [formData, setFormData] = useState({
-    original_principal: '350000',
-    current_principal: '320000',
-    interest_rate: '6.5',
-    monthly_payment: '2210',
-    start_date: '2024-01-15',
-    term_months: '360',
-    property_value: '450000',
-    loan_type: 'conventional'
+  const [properties, setProperties] = useState<Property[]>([
+    {
+      id: '1',
+      name: 'Primary Residence',
+      address: '123 Main St, Toronto, ON',
+      propertyValue: '750000',
+      currentBalance: '450000',
+      interestRate: '5.79',
+      monthlyPayment: '2850',
+      originalAmount: '600000',
+      startDate: '2023-06-01',
+      termMonths: '300',
+      loanType: 'fixed',
+      renewalDate: '2028-06-01',
+      paymentFrequency: 'monthly'
+    },
+    {
+      id: '2',
+      name: 'Rental Property',
+      address: '456 Oak Ave, Vancouver, BC',
+      propertyValue: '950000',
+      currentBalance: '620000',
+      interestRate: '6.25',
+      monthlyPayment: '4100',
+      originalAmount: '760000',
+      startDate: '2022-03-15',
+      termMonths: '300',
+      loanType: 'variable',
+      renewalDate: '2027-03-15',
+      paymentFrequency: 'accelerated'
+    }
+  ]);
+
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(properties[0]);
+  const [activeTab, setActiveTab] = useState<'overview' | 'analysis' | 'forecast'>('overview');
+  const [showAddProperty, setShowAddProperty] = useState(false);
+  const [newProperty, setNewProperty] = useState<Partial<Property>>({
+    name: '',
+    address: '',
+    propertyValue: '',
+    currentBalance: '',
+    interestRate: '',
+    monthlyPayment: '',
+    originalAmount: '',
+    startDate: '',
+    termMonths: '300',
+    loanType: 'fixed',
+    renewalDate: '',
+    paymentFrequency: 'monthly'
   });
 
-  const [scenarioName, setScenarioName] = useState('');
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
-  const [savedScenarios, setSavedScenarios] = useState<SavedScenario[]>([
-    { id: '1', name: 'Primary Home Refi', date: '2026-04-10', principal: '320000', rate: '6.5', propertyValue: '450000', monthlyPayment: '2210', ltv: 71.1, equity: 130000 },
-    { id: '2', name: 'Investment Property', date: '2026-04-08', principal: '180000', rate: '7.25', propertyValue: '280000', monthlyPayment: '1450', ltv: 64.3, equity: 100000 }
-  ]);
-  const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'analyze' | 'refinance'>('analyze');
-
-  const peopleAlsoAsk = [
-    { question: 'When should I refinance my mortgage?', answer: 'Generally when rates drop 0.5-0.75% below your current rate. Also consider if you plan to stay 2+ years to recoup closing costs.' },
-    { question: 'What is a good LTV ratio?', answer: 'Below 80% avoids PMI. Below 60% is considered excellent and may qualify for better rates.' },
-    { question: 'How much equity do I need to refinance?', answer: 'At least 5-20% equity (80-95% LTV). Some programs allow lower, but with higher rates or PMI.' },
-    { question: 'Should I do cash-out refinance?', answer: 'Useful for home improvements or debt consolidation, but increases your loan balance. Compare rates vs. HELOC.' }
+  // Market forecast data
+  const marketForecast = [
+    { month: 'Q2 2026', fixedRate: 5.5, variableRate: 4.8, trend: 'stable' },
+    { month: 'Q3 2026', fixedRate: 5.4, variableRate: 4.6, trend: 'dropping' },
+    { month: 'Q4 2026', fixedRate: 5.3, variableRate: 4.5, trend: 'dropping' },
+    { month: 'Q1 2027', fixedRate: 5.2, variableRate: 4.4, trend: 'dropping' },
+    { month: 'Q2 2027', fixedRate: 5.1, variableRate: 4.3, trend: 'stable' }
   ];
 
-  const refinanceTips = [
-    { title: 'Rate Drop Alert', detail: 'Rates dropped 0.25% this week. Consider locking now.' },
-    { title: '15-Year vs 30-Year', detail: '15-year saves $120K in interest but $500/mo more payment.' },
-    { title: 'Closing Costs', detail: 'Average $5,000-10,000. Roll into loan or pay upfront?' }
+  const geopoliticalNotes = [
+    { topic: 'US-Canada Trade Relations', impact: 'Stable', note: 'Recent trade deals maintaining steady rates' },
+    { topic: 'Bank of Canada Policy', impact: 'Rate Cuts Expected', note: 'BoC signaling 2-3 rate cuts in 2026' },
+    { topic: 'Global Economic Slowdown', impact: 'Downward Pressure', note: 'Recession concerns may accelerate rate cuts' },
+    { topic: 'Housing Market', impact: 'Moderate', note: 'Cooling market may push lenders to offer better deals' }
   ];
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const calculateEMI = (principal: number, rate: number, months: number) => {
+    const monthlyRate = rate / 100 / 12;
+    return (principal * monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
   };
 
-  const saveScenario = () => {
-    if (!scenarioName.trim()) return;
-    const ltv = (parseFloat(formData.current_principal) / parseFloat(formData.property_value)) * 100;
-    const equity = parseFloat(formData.property_value) - parseFloat(formData.current_principal);
-    
-    const newScenario: SavedScenario = {
-      id: Date.now().toString(),
-      name: scenarioName,
-      date: new Date().toISOString().split('T')[0],
-      principal: formData.current_principal,
-      rate: formData.interest_rate,
-      propertyValue: formData.property_value,
-      monthlyPayment: formData.monthly_payment,
-      ltv,
-      equity
-    };
-    
-    setSavedScenarios(prev => [newScenario, ...prev]);
-    setScenarioName('');
-  };
-
-  const loadScenario = (scenario: SavedScenario) => {
-    setFormData({
-      original_principal: scenario.principal,
-      current_principal: scenario.principal,
-      interest_rate: scenario.rate,
-      monthly_payment: scenario.monthlyPayment,
-      start_date: '2024-01-15',
-      term_months: '360',
-      property_value: scenario.propertyValue,
-      loan_type: 'conventional'
-    });
-    analyzeMortgage();
-  };
-
-  const deleteScenario = (id: string) => {
-    setSavedScenarios(prev => prev.filter(s => s.id !== id));
-  };
-
-  const analyzeMortgage = () => {
-    setLoading(true);
-    setTimeout(() => {
-      const ltv = (parseFloat(formData.current_principal) / parseFloat(formData.property_value)) * 100;
-      const equity = parseFloat(formData.property_value) - parseFloat(formData.current_principal);
-      
-      setAnalysisResult({
-        remaining_months: parseInt(formData.term_months) - 24,
-        total_interest_remaining: parseFloat(formData.current_principal) * 0.45,
-        monthly_payment: parseFloat(formData.monthly_payment),
-        current_ltv: ltv,
-        pmi_required: ltv > 80,
-        equity_accumulated: equity,
-        monthly_principal: parseFloat(formData.current_principal) * (parseFloat(formData.interest_rate)/100/12),
-        recommendations: [
-          { type: 'refinance', action: 'Consider refinancing to lower your rate', potential_savings: 45000, new_rate_estimate: 6.5, breakeven_months: 24, confidence: 'high' },
-          { type: 'pmi_removal', action: ltv > 80 ? 'Reach 80% LTV to remove PMI' : 'PMI not required', equity_needed: ltv > 80 ? parseFloat(formData.property_value) * 0.2 - equity : 0, monthly_savings_from_pmi: ltv > 80 ? 150 : 0 },
-          { type: 'extra_payments', action: 'Make extra payments to shorten loan term', potential_savings: parseInt(formData.term_months) * 50 }
-        ]
-      });
-      setLoading(false);
-    }, 800);
-  };
-
-  const calculateRefinance = () => {
-    setLoading(true);
-    setTimeout(() => {
-      const scenarios = [
-        { term: 30, rate: 6.5, monthly: 2024, savings: 492, totalSavings: 116500 },
-        { term: 20, rate: 6.25, monthly: 2450, savings: 200, totalSavings: 85000 },
-        { term: 15, rate: 5.875, monthly: 2800, savings: -50, totalSavings: 95000 }
-      ];
-      
-      setAnalysisResult({
-        remaining_months: parseInt(formData.term_months) - 24,
-        total_interest_remaining: parseFloat(formData.current_principal) * 0.45,
-        monthly_payment: parseFloat(formData.monthly_payment),
-        current_ltv: (parseFloat(formData.current_principal) / parseFloat(formData.property_value)) * 100,
-        pmi_required: false,
-        equity_accumulated: parseFloat(formData.property_value) - parseFloat(formData.current_principal),
-        recommendations: scenarios.map(s => ({ type: 'refi_scenario', action: `${s.term} year at ${s.rate}%`, potential_savings: s.totalSavings, monthly_savings: s.savings, new_rate_estimate: s.rate }))
-      });
-      setLoading(false);
-    }, 800);
-  };
-
-  const getAmortizationData = () => {
-    const months = Math.min(120, parseInt(formData.term_months));
+  const getAmortizationData = (property: Property) => {
     const data = [];
-    let balance = parseFloat(formData.current_principal);
-    const monthlyRate = parseFloat(formData.interest_rate) / 100 / 12;
-    const payment = parseFloat(formData.monthly_payment);
+    let balance = parseFloat(property.currentBalance);
+    const monthlyRate = parseFloat(property.interestRate) / 100 / 12;
+    const payment = parseFloat(property.monthlyPayment);
+    const totalMonths = parseInt(property.termMonths);
     
-    for (let i = 1; i <= months; i += 12) {
-      data.push({ year: `Year ${Math.ceil(i/12)}`, balance: Math.round(balance), interest: Math.round(balance * monthlyRate * 12) });
-      balance = balance * (1 + monthlyRate) - payment;
-      if (balance < 0) balance = 0;
+    for (let i = 0; i <= Math.min(60, totalMonths); i += 6) {
+      if (i === 0) {
+        data.push({ month: 'Start', principal: parseFloat(property.currentBalance), interest: 0, balance: parseFloat(property.currentBalance) });
+        continue;
+      }
+      
+      let yearlyPrincipal = 0;
+      let yearlyInterest = 0;
+      
+      for (let m = 0; m < 6; m++) {
+        const interest = balance * monthlyRate;
+        const principalPaid = payment - interest;
+        yearlyInterest += interest;
+        yearlyPrincipal += principalPaid;
+        balance -= principalPaid;
+        if (balance < 0) balance = 0;
+      }
+      
+      data.push({
+        month: `Month ${i}`,
+        principal: Math.round(yearlyPrincipal),
+        interest: Math.round(yearlyInterest),
+        balance: Math.round(Math.max(0, balance))
+      });
     }
     return data;
   };
 
+  const getEMIBreakdown = (property: Property) => {
+    const principal = parseFloat(property.currentBalance);
+    const rate = parseFloat(property.interestRate);
+    const monthlyRate = rate / 100 / 12;
+    const emi = calculateEMI(principal, rate, parseInt(property.termMonths));
+    const firstMonthInterest = principal * monthlyRate;
+    const firstMonthPrincipal = emi - firstMonthInterest;
+    
+    return {
+      emi: emi.toFixed(2),
+      principal: firstMonthPrincipal.toFixed(2),
+      interest: firstMonthInterest.toFixed(2),
+      totalInterest: (emi * parseInt(property.termMonths) - principal).toFixed(2),
+      totalPayment: (emi * parseInt(property.termMonths)).toFixed(2)
+    };
+  };
+
+  const getRefinanceRecommendations = (property: Property) => {
+    const recommendations = [];
+    const currentRate = parseFloat(property.interestRate);
+    
+    // Rate comparison
+    if (currentRate > 6.0) {
+      recommendations.push({
+        type: 'high_rate',
+        title: 'Consider Refinancing',
+        description: 'Your rate is above current market. Refinancing could save significant interest.',
+        potential: ((currentRate - 5.5) * parseFloat(property.currentBalance) / 100).toFixed(0)
+      });
+    }
+    
+    // Fixed vs Variable analysis
+    if (property.loanType === 'fixed') {
+      recommendations.push({
+        type: 'variable_benefit',
+        title: 'Variable Rate Opportunity',
+        description: 'Variable rates are currently lower. Consider switching at renewal for savings.',
+        potential: ((currentRate - 4.8) * parseFloat(property.currentBalance) / 100).toFixed(0)
+      });
+    } else {
+      recommendations.push({
+        type: 'fixed_security',
+        title: 'Lock in Current Rate',
+        description: 'Consider fixing your rate before potential increases. Fixed provides peace of mind.',
+        potential: '0'
+      });
+    }
+    
+    // Equity recommendations
+    const ltv = (parseFloat(property.currentBalance) / parseFloat(property.propertyValue)) * 100;
+    if (ltv < 60) {
+      recommendations.push({
+        type: 'equity_access',
+        title: 'Access Home Equity',
+        description: 'You have significant equity (20%+). Consider HELOC for investments or renovations.',
+        potential: Math.round(parseFloat(property.propertyValue) * (100 - ltv) / 100).toString()
+      });
+    }
+    
+    // Accelerated payments
+    recommendations.push({
+      type: 'accelerate',
+      title: 'Accelerated Payments',
+      description: 'Switch to accelerated bi-weekly to pay off 4 years earlier and save $45K+ in interest.',
+      potential: '45000'
+    });
+    
+    return recommendations;
+  };
+
+  const handleAddProperty = () => {
+    if (!newProperty.name || !newProperty.currentBalance) return;
+    
+    const property: Property = {
+      id: Date.now().toString(),
+      ...newProperty as Property
+    };
+    
+    setProperties(prev => [...prev, property]);
+    setSelectedProperty(property);
+    setShowAddProperty(false);
+    setNewProperty({
+      name: '', address: '', propertyValue: '', currentBalance: '',
+      interestRate: '', monthlyPayment: '', originalAmount: '',
+      startDate: '', termMonths: '300', loanType: 'fixed',
+      renewalDate: '', paymentFrequency: 'monthly'
+    });
+  };
+
+  const totalPortfolioValue = properties.reduce((sum, p) => sum + parseFloat(p.propertyValue), 0);
+  const totalMortgageBalance = properties.reduce((sum, p) => sum + parseFloat(p.currentBalance), 0);
+  const totalEquity = totalPortfolioValue - totalMortgageBalance;
+  const weightedAvgRate = properties.reduce((sum, p) => sum + parseFloat(p.interestRate) * parseFloat(p.currentBalance), 0) / totalMortgageBalance;
+
+  const emiBreakdown = selectedProperty ? getEMIBreakdown(selectedProperty) : null;
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-            <Home className="w-6 h-6 text-blue-600" />
+            <Building2 className="w-6 h-6 text-blue-600" />
           </div>
           <div>
-<h2 className="text-2xl font-bold text-gray-900">Mortgage Analyzer</h2>
-            <p className="text-gray-500">Analyze your mortgage and get refinancing recommendations</p>
+            <h2 className="text-2xl font-bold text-gray-900">Mortgage Analyzer</h2>
+            <p className="text-gray-500">Canadian Real Estate Portfolio Management</p>
           </div>
         </div>
+        <button onClick={() => setShowAddProperty(true)} className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
+          <Home className="w-4 h-4" />
+          Add Property
+        </button>
       </div>
 
+      {/* Portfolio Summary */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
+          <div className="text-center">
+            <p className="text-sm text-blue-600 font-medium">Portfolio Value</p>
+            <p className="text-xl font-bold text-blue-900 mt-1">${totalPortfolioValue.toLocaleString()}</p>
+          </div>
+        </Card>
+        <Card className="bg-gradient-to-br from-red-50 to-red-100">
+          <div className="text-center">
+            <p className="text-sm text-red-600 font-medium">Total Mortgage</p>
+            <p className="text-xl font-bold text-red-900 mt-1">${totalMortgageBalance.toLocaleString()}</p>
+          </div>
+        </Card>
+        <Card className="bg-gradient-to-br from-green-50 to-green-100">
+          <div className="text-center">
+            <p className="text-sm text-green-600 font-medium">Total Equity</p>
+            <p className="text-xl font-bold text-green-900 mt-1">${totalEquity.toLocaleString()}</p>
+          </div>
+        </Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
+          <div className="text-center">
+            <p className="text-sm text-purple-600 font-medium">Avg. Rate</p>
+            <p className="text-xl font-bold text-purple-900 mt-1">{weightedAvgRate.toFixed(2)}%</p>
+          </div>
+        </Card>
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100">
+          <div className="text-center">
+            <p className="text-sm text-orange-600 font-medium">Properties</p>
+            <p className="text-xl font-bold text-orange-900 mt-1">{properties.length}</p>
+          </div>
+        </Card>
+      </div>
+
+      {/* Property Tabs */}
       <div className="flex gap-4 border-b border-gray-200 pb-4">
-        <button onClick={() => setActiveTab('analyze')} className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'analyze' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-          <Calculator className="w-4 h-4 inline mr-2" />
-          Analyze Mortgage
+        <button onClick={() => setActiveTab('overview')} className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'overview' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          Property Overview
         </button>
-        <button onClick={() => setActiveTab('refinance')} className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'refinance' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-          <TrendingUp className="w-4 h-4 inline mr-2" />
-          Refinance Calculator
+        <button onClick={() => setActiveTab('analysis')} className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'analysis' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          EMI & Progression
+        </button>
+        <button onClick={() => setActiveTab('forecast')} className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'forecast' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          Market Forecast
         </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Input Form */}
-        <Card title={activeTab === 'analyze' ? 'Enter Your Mortgage Details' : 'Refinance Calculator'}>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Original Principal</label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input type="number" name="original_principal" value={formData.original_principal} onChange={handleInputChange} className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Current Balance</label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input type="number" name="current_principal" value={formData.current_principal} onChange={handleInputChange} className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Interest Rate (%)</label>
-                <div className="relative">
-                  <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input type="number" step="0.01" name="interest_rate" value={formData.interest_rate} onChange={handleInputChange} className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Payment</label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input type="number" name="monthly_payment" value={formData.monthly_payment} onChange={handleInputChange} className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Property Value</label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input type="number" name="property_value" value={formData.property_value} onChange={handleInputChange} className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Loan Term</label>
-                <select name="term_months" value={formData.term_months} onChange={handleInputChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                  <option value="360">30 Years</option>
-                  <option value="240">20 Years</option>
-                  <option value="180">15 Years</option>
-                </select>
-              </div>
-            </div>
-
-            <button onClick={activeTab === 'analyze' ? analyzeMortgage : calculateRefinance} disabled={loading} className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-              {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><TrendingUp className="w-5 h-5" />{activeTab === 'analyze' ? 'Analyze Mortgage' : 'Calculate Refinance'}</>}
-            </button>
-          </div>
-        </Card>
-
-        {/* Middle Column - Results */}
+        {/* Properties List */}
         <div className="space-y-4">
-          {analysisResult ? (
-            <>
-              <div className="grid grid-cols-3 gap-4">
-                <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
-                  <div className="text-center">
-                    <p className="text-sm text-blue-600 font-medium">Current LTV</p>
-                    <p className="text-2xl font-bold text-blue-900 mt-1">{analysisResult.current_ltv.toFixed(1)}%</p>
-                    {analysisResult.pmi_required && <span className="inline-flex items-center gap-1 mt-2 text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full"><AlertCircle className="w-3 h-3" />PMI Required</span>}
-                  </div>
-                </Card>
-                <Card className="bg-gradient-to-br from-green-50 to-green-100">
-                  <div className="text-center">
-                    <p className="text-sm text-green-600 font-medium">Equity Built</p>
-                    <p className="text-2xl font-bold text-green-900 mt-1">${analysisResult.equity_accumulated.toLocaleString()}</p>
-                  </div>
-                </Card>
-                <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
-                  <div className="text-center">
-                    <p className="text-sm text-purple-600 font-medium">Interest Remaining</p>
-                    <p className="text-2xl font-bold text-purple-900 mt-1">${analysisResult.total_interest_remaining.toLocaleString()}</p>
-                  </div>
-                </Card>
-              </div>
-
-              {/* Amortization Chart */}
-              <Card title="Amortization Schedule" subtitle="Balance over time">
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={getAmortizationData()}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                      <XAxis dataKey="year" stroke="#6B7280" fontSize={10} />
-                      <YAxis stroke="#6B7280" fontSize={10} tickFormatter={(v) => `$${v/1000}k`} />
-                      <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
-                      <Bar dataKey="balance" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Balance" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
-
-              <Card title="Recommendations">
-                <div className="space-y-3">
-                  {analysisResult.recommendations.map((rec: any, index: number) => (
-                    <div key={index} className={`p-4 rounded-lg border ${rec.type === 'refinance' || rec.type === 'refi_scenario' ? 'border-blue-200 bg-blue-50' : rec.type === 'pmi_removal' ? 'border-orange-200 bg-orange-50' : 'border-gray-200 bg-gray-50'}`}>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="font-semibold text-gray-900 capitalize">{rec.type.replace('_', ' ')}</h4>
-                          <p className="text-sm text-gray-600 mt-1">{rec.action}</p>
-                        </div>
-                        {rec.potential_savings && <span className="flex items-center gap-1 text-green-600 font-semibold"><ArrowUpRight className="w-4 h-4" />${rec.potential_savings.toLocaleString()}</span>}
-                      </div>
-                      {rec.breakeven_months && <p className="text-xs text-gray-500 mt-2">Breakeven: {rec.breakeven_months} months</p>}
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </>
-          ) : (
-            <Card className="h-96 flex items-center justify-center">
-              <div className="text-center text-gray-400">
-                <Home className="w-12 h-12 mx-auto mb-4" />
-                <p>Enter your mortgage details to see analysis</p>
-              </div>
-            </Card>
-          )}
-        </div>
-
-        {/* Right Column - People Also Ask & Refinance Tips */}
-        <div className="space-y-4">
-          {/* Refinance Quick Tips */}
-          {activeTab === 'refinance' && (
-            <Card title="Refinance Quick Tips" className="bg-gradient-to-br from-indigo-50 to-purple-50">
-              <div className="space-y-3">
-                {refinanceTips.map((tip, idx) => (
-                  <div key={idx} className="flex items-start gap-3 p-3 bg-white rounded-lg border border-indigo-100">
-<div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <TrendingDown className="w-4 h-4 text-indigo-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 text-sm">{tip.title}</h4>
-                      <p className="text-xs text-gray-600 mt-0.5">{tip.detail}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-
-          {/* People Also Ask */}
-          <Card title="People Also Ask" className="bg-white">
+          <Card title="Your Properties">
             <div className="space-y-3">
-              {peopleAlsoAsk.map((item, idx) => (
-                <div key={idx} className="border-b border-gray-100 last:border-0 pb-3 last:pb-0">
-                  <button className="flex items-start gap-2 w-full text-left hover:bg-gray-50 p-2 -m-2 rounded-lg transition-colors">
-                    <HelpCircle className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+              {properties.map((property) => (
+                <div
+                  key={property.id}
+                  onClick={() => setSelectedProperty(property)}
+                  className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                    selectedProperty?.id === property.id
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-medium text-gray-900 text-sm">{item.question}</p>
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{item.answer}</p>
+                      <h4 className="font-semibold text-gray-900">{property.name}</h4>
+                      <p className="text-xs text-gray-500 mt-1">{property.address}</p>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-gray-400 ml-auto flex-shrink-0" />
-                  </button>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      property.loanType === 'fixed' ? 'bg-blue-100 text-blue-700' :
+                      property.loanType === 'variable' ? 'bg-green-100 text-green-700' :
+                      'bg-purple-100 text-purple-700'
+                    }`}>
+                      {property.loanType.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-gray-500">Balance:</span>
+                      <span className="ml-1 font-medium">${parseFloat(property.currentBalance).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Rate:</span>
+                      <span className="ml-1 font-medium">{property.interestRate}%</span>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-xs text-gray-500">
+                    Renewal: {new Date(property.renewalDate).toLocaleDateString('en-CA', { year: 'numeric', month: 'short' })}
+                  </div>
                 </div>
               ))}
             </div>
           </Card>
         </div>
+
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-4">
+          {activeTab === 'overview' && selectedProperty && (
+            <>
+              {/* EMI Breakdown */}
+              <Card title="Monthly EMI Breakdown" subtitle={selectedProperty.name}>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-600 font-medium">Monthly EMI</p>
+                    <p className="text-2xl font-bold text-blue-900">${emiBreakdown?.emi}</p>
+                  </div>
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <p className="text-sm text-green-600 font-medium">Principal</p>
+                    <p className="text-2xl font-bold text-green-900">${emiBreakdown?.principal}</p>
+                  </div>
+                  <div className="text-center p-4 bg-red-50 rounded-lg">
+                    <p className="text-sm text-red-600 font-medium">Interest</p>
+                    <p className="text-2xl font-bold text-red-900">${emiBreakdown?.interest}</p>
+                  </div>
+                  <div className="text-center p-4 bg-purple-50 rounded-lg">
+                    <p className="text-sm text-purple-600 font-medium">Total Interest</p>
+                    <p className="text-2xl font-bold text-purple-900">${parseInt(emiBreakdown?.totalInterest || '0').toLocaleString()}</p>
+                  </div>
+                </div>
+                
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={[
+                      { name: 'Principal', value: parseFloat(emiBreakdown?.principal || '0'), fill: '#10B981' },
+                      { name: 'Interest', value: parseFloat(emiBreakdown?.interest || '0'), fill: '#EF4444' }
+                    ]}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis tickFormatter={(v) => `$${v}`} />
+                      <Tooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
+                      <Bar dataKey="value" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+
+              {/* Refinance Recommendations */}
+              <Card title="Recommendations">
+                <div className="space-y-3">
+                  {getRefinanceRecommendations(selectedProperty).map((rec, idx) => (
+                    <div key={idx} className={`p-4 rounded-lg border ${
+                      rec.type === 'high_rate' ? 'border-red-200 bg-red-50' :
+                      rec.type === 'variable_benefit' ? 'border-green-200 bg-green-50' :
+                      rec.type === 'equity_access' ? 'border-blue-200 bg-blue-50' :
+                      'border-gray-200 bg-gray-50'
+                    }`}>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900">{rec.title}</h4>
+                          <p className="text-sm text-gray-600 mt-1">{rec.description}</p>
+                        </div>
+                        {rec.potential !== '0' && (
+                          <span className="flex items-center gap-1 text-green-600 font-semibold">
+                            <ArrowUpRight className="w-4 h-4" />
+                            Save ${parseInt(rec.potential).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </>
+          )}
+
+          {activeTab === 'analysis' && selectedProperty && (
+            <>
+              {/* Amortization Chart */}
+              <Card title="Mortgage Progression" subtitle="Principal vs Interest over time">
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={getAmortizationData(selectedProperty)}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" fontSize={10} />
+                      <YAxis fontSize={10} tickFormatter={(v) => `$${v/1000}k`} />
+                      <Tooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
+                      <Legend />
+                      <Area type="monotone" dataKey="principal" stackId="1" stroke="#10B981" fill="#D1FAE5" name="Principal Paid" />
+                      <Area type="monotone" dataKey="interest" stackId="1" stroke="#EF4444" fill="#FEE2E2" name="Interest Paid" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+
+              {/* Property Details */}
+              <Card title="Property Details">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">Property Value</p>
+                    <p className="text-lg font-semibold">${parseFloat(selectedProperty.propertyValue).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Original Amount</p>
+                    <p className="text-lg font-semibold">${parseFloat(selectedProperty.originalAmount).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Start Date</p>
+                    <p className="text-lg font-semibold">{new Date(selectedProperty.startDate).toLocaleDateString('en-CA')}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Renewal Date</p>
+                    <p className="text-lg font-semibold text-orange-600">{new Date(selectedProperty.renewalDate).toLocaleDateString('en-CA')}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">LTV</p>
+                    <p className="text-lg font-semibold">{((parseFloat(selectedProperty.currentBalance) / parseFloat(selectedProperty.propertyValue)) * 100).toFixed(1)}%</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Equity</p>
+                    <p className="text-lg font-semibold text-green-600">${(parseFloat(selectedProperty.propertyValue) - parseFloat(selectedProperty.currentBalance)).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Payment</p>
+                    <p className="text-lg font-semibold">${parseFloat(selectedProperty.monthlyPayment).toLocaleString()}/{selectedProperty.paymentFrequency}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Remaining Term</p>
+                    <p className="text-lg font-semibold">{selectedProperty.termMonths} months</p>
+                  </div>
+                </div>
+              </Card>
+            </>
+          )}
+
+          {activeTab === 'forecast' && (
+            <>
+              {/* Market Forecast Chart */}
+              <Card title="Interest Rate Forecast" subtitle="Bank of Canada projections">
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={marketForecast}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis domain={[4, 6]} tickFormatter={(v) => `${v}%`} />
+                      <Tooltip formatter={(value) => `${Number(value).toFixed(2)}%`} />
+                      <Legend />
+                      <Area type="monotone" dataKey="fixedRate" stroke="#3B82F6" fill="#DBEAFE" name="Fixed Rate" />
+                      <Area type="monotone" dataKey="variableRate" stroke="#10B981" fill="#D1FAE5" name="Variable Rate" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+
+              {/* Geopolitical Context */}
+              <Card title="Market Intelligence" subtitle="Factors affecting Canadian mortgage rates">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {geopoliticalNotes.map((item, idx) => (
+                    <div key={idx} className="p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Globe className="w-4 h-4 text-blue-600" />
+                        <h4 className="font-semibold text-gray-900">{item.topic}</h4>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          item.impact === 'Rate Cuts Expected' || item.impact === 'Downward Pressure' ? 'bg-green-100 text-green-700' :
+                          item.impact === 'Stable' ? 'bg-blue-100 text-blue-700' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {item.impact}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600">{item.note}</p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              {/* Key Insights */}
+              <Card title="Key Insights for Your Portfolio" className="bg-gradient-to-br from-indigo-50 to-purple-50">
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 p-3 bg-white rounded-lg">
+                    <Info className="w-5 h-5 text-indigo-600 mt-0.5" />
+                    <p className="text-sm text-gray-700">Variable rates are currently 0.7% lower than fixed rates. Consider variable if you have stable income and can handle rate fluctuations.</p>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 bg-white rounded-lg">
+                    <Leaf className="w-5 h-5 text-green-600 mt-0.5" />
+                    <p className="text-sm text-gray-700">Bank of Canada is signaling rate cuts through 2026. If you have a variable rate, you may see automatic decreases in your payments.</p>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 bg-white rounded-lg">
+                    <BarChart3 className="w-5 h-5 text-orange-600 mt-0.5" />
+                    <p className="text-sm text-gray-700">Consider locking in your renewal 120 days before expiry to secure current rates. Many lenders offer rate holds.</p>
+                  </div>
+                </div>
+              </Card>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Saved Scenarios Section */}
-      <Card title="Your Saved Scenarios" subtitle="Scenarios saved in this session">
-        <div className="flex gap-3 mb-4">
-          <input
-            type="text"
-            placeholder="Name this scenario..."
-            value={scenarioName}
-            onChange={(e) => setScenarioName(e.target.value)}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          />
-          <button onClick={saveScenario} disabled={!scenarioName.trim()} className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2">
-            <Save className="w-4 h-4" />
-            Save Current
-          </button>
-        </div>
-
-        {savedScenarios.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {savedScenarios.map((scenario) => (
-              <div key={scenario.id} className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors group">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h4 className="font-semibold text-gray-900">{scenario.name}</h4>
-                    <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                      <Clock className="w-3 h-3" />
-                      {scenario.date}
-                    </p>
-                  </div>
-                  <button onClick={() => deleteScenario(scenario.id)} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <span className="text-gray-500">Balance:</span>
-                    <span className="ml-1 font-medium">${parseFloat(scenario.principal).toLocaleString()}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Rate:</span>
-                    <span className="ml-1 font-medium">{scenario.rate}%</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">LTV:</span>
-                    <span className="ml-1 font-medium">{scenario.ltv.toFixed(1)}%</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Equity:</span>
-                    <span className="ml-1 font-medium text-green-600">${scenario.equity.toLocaleString()}</span>
-                  </div>
-                </div>
-                <button onClick={() => loadScenario(scenario)} className="mt-3 w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
-                  <ChevronRight className="w-4 h-4" />
-                  Load Scenario
-                </button>
+      {/* Add Property Modal */}
+      {showAddProperty && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold">Add New Property</h3>
+              <button onClick={() => setShowAddProperty(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Property Name</label>
+                <input type="text" value={newProperty.name} onChange={(e) => setNewProperty({...newProperty, name: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
               </div>
-            ))}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <input type="text" value={newProperty.address} onChange={(e) => setNewProperty({...newProperty, address: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Property Value ($)</label>
+                <input type="number" value={newProperty.propertyValue} onChange={(e) => setNewProperty({...newProperty, propertyValue: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Current Balance ($)</label>
+                <input type="number" value={newProperty.currentBalance} onChange={(e) => setNewProperty({...newProperty, currentBalance: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Interest Rate (%)</label>
+                <input type="number" step="0.01" value={newProperty.interestRate} onChange={(e) => setNewProperty({...newProperty, interestRate: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Payment ($)</label>
+                <input type="number" value={newProperty.monthlyPayment} onChange={(e) => setNewProperty({...newProperty, monthlyPayment: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Loan Type</label>
+                <select value={newProperty.loanType} onChange={(e) => setNewProperty({...newProperty, loanType: e.target.value as any})} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                  <option value="fixed">Fixed Rate</option>
+                  <option value="variable">Variable Rate</option>
+                  <option value="heloc">HELOC</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Renewal Date</label>
+                <input type="date" value={newProperty.renewalDate} onChange={(e) => setNewProperty({...newProperty, renewalDate: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+              </div>
+            </div>
+            <div className="mt-6 flex gap-3 justify-end">
+              <button onClick={() => setShowAddProperty(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Cancel</button>
+              <button onClick={handleAddProperty} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add Property</button>
+            </div>
           </div>
-        ) : (
-          <div className="text-center py-8 text-gray-400">
-            <Users className="w-8 h-8 mx-auto mb-2" />
-            <p>No saved scenarios yet. Save your first one above!</p>
-          </div>
-        )}
-      </Card>
+        </div>
+      )}
     </div>
   );
 };

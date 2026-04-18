@@ -1,12 +1,13 @@
 import React from 'react';
-import { Home, CreditCard, DollarSign, TrendingUp, Target, Settings } from 'lucide-react';
+import { Home, CreditCard, DollarSign, TrendingUp, Target, Settings, PieChart } from 'lucide-react';
 import MortgageAnalyzer from './components/MortgageAnalyzer';
 import CreditCardOptimizer from './components/CreditCardOptimizer';
 import DebtPayoffPlanner from './components/DeadPayoffPlanner';
 import IncomeTracker from './components/IncomeTracker';
+import InvestmentsTracker from './components/InvestmentsTracker';
 import Dashboard from './components/Dashboard';
 
-type Page = 'dashboard' | 'mortgage' | 'credit-card' | 'debt' | 'income';
+type Page = 'dashboard' | 'mortgage' | 'credit-card' | 'debt' | 'income' | 'investments';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = React.useState<Page>('dashboard');
@@ -16,19 +17,22 @@ const App: React.FC = () => {
     { id: 'mortgage' as Page, label: 'Mortgage', icon: TrendingUp },
     { id: 'credit-card' as Page, label: 'Credit Cards', icon: CreditCard },
     { id: 'debt' as Page, label: 'Debt Payoff', icon: Target },
+    { id: 'investments' as Page, label: 'Investments', icon: PieChart },
     { id: 'income' as Page, label: 'Income', icon: DollarSign },
   ];
 
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard />;
+        return <Dashboard onNavigate={setCurrentPage} />;
       case 'mortgage':
         return <MortgageAnalyzer />;
       case 'credit-card':
         return <CreditCardOptimizer />;
       case 'debt':
         return <DebtPayoffPlanner />;
+      case 'investments':
+        return <InvestmentsTracker />;
       case 'income':
         return <IncomeTracker />;
       default:

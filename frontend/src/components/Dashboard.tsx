@@ -3,10 +3,16 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar, Legend
 } from 'recharts';
-import { TrendingUp, CreditCard, Target, AlertTriangle, ArrowUpRight, Wallet, PiggyBank } from 'lucide-react';
+import { TrendingUp, CreditCard, Target, AlertTriangle, ArrowUpRight, Wallet, PiggyBank, PieChart as PieChartIcon } from 'lucide-react';
 import Card from './ui/Card';
 
-const cashFlowData = [
+// Type for navigation callback
+interface DashboardProps {
+  onNavigate?: (page: string) => void;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+  const cashFlowData = [
   { month: 'Jan', income: 10000, expenses: 6500, savings: 3500 },
   { month: 'Feb', income: 10000, expenses: 6200, savings: 3800 },
   { month: 'Mar', income: 10500, expenses: 6800, savings: 3700 },
@@ -34,8 +40,7 @@ const savingsGoalProgress = [
   { name: 'New Car', current: 8000, target: 15000, color: '#F59E0B' },
 ];
 
-const Dashboard: React.FC = () => {
-  const financialSummary = {
+const financialSummary = {
     totalAssets: 215000,
     totalDebts: 42000,
     netWorth: 173000,
@@ -258,33 +263,33 @@ const Dashboard: React.FC = () => {
         {/* Quick Actions */}
         <Card title="Quick Actions">
           <div className="grid grid-cols-2 gap-3">
-            <button className="p-4 bg-blue-50 rounded-lg text-left hover:bg-blue-100 transition-colors group">
+            <button onClick={() => onNavigate?.('mortgage')} className="p-4 bg-blue-50 rounded-lg text-left hover:bg-blue-100 transition-colors group">
               <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                 <TrendingUp className="w-5 h-5 text-white" />
               </div>
               <h4 className="font-semibold">Analyze Mortgage</h4>
               <p className="text-xs text-gray-500 mt-1">Check refinance options</p>
             </button>
-            <button className="p-4 bg-purple-50 rounded-lg text-left hover:bg-purple-100 transition-colors group">
+            <button onClick={() => onNavigate?.('credit-card')} className="p-4 bg-purple-50 rounded-lg text-left hover:bg-purple-100 transition-colors group">
               <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                 <CreditCard className="w-5 h-5 text-white" />
               </div>
               <h4 className="font-semibold">Optimize Cards</h4>
               <p className="text-xs text-gray-500 mt-1">Reduce credit card debt</p>
             </button>
-            <button className="p-4 bg-green-50 rounded-lg text-left hover:bg-green-100 transition-colors group">
+            <button onClick={() => onNavigate?.('debt')} className="p-4 bg-green-50 rounded-lg text-left hover:bg-green-100 transition-colors group">
               <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                 <Target className="w-5 h-5 text-white" />
               </div>
               <h4 className="font-semibold">Debt Payoff Plan</h4>
               <p className="text-xs text-gray-500 mt-1">Create payoff strategy</p>
             </button>
-            <button className="p-4 bg-orange-50 rounded-lg text-left hover:bg-orange-100 transition-colors group">
+            <button onClick={() => onNavigate?.('investments')} className="p-4 bg-orange-50 rounded-lg text-left hover:bg-orange-100 transition-colors group">
               <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                <Wallet className="w-5 h-5 text-white" />
+                <PieChartIcon className="w-5 h-5 text-white" />
               </div>
-              <h4 className="font-semibold">Track Income</h4>
-              <p className="text-xs text-gray-500 mt-1">Manage income sources</p>
+              <h4 className="font-semibold">Track Investments</h4>
+              <p className="text-xs text-gray-500 mt-1">Manage your portfolio</p>
             </button>
           </div>
         </Card>
