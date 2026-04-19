@@ -52,7 +52,7 @@ const financialSummary = {
   const recentActivity = [
     { type: 'mortgage', title: 'Mortgage Rate Alert', description: 'Rates dropped 0.25% - Consider refinancing', time: '2 hours ago' },
     { type: 'credit', title: 'Credit Card Optimization', description: 'You could save $3,200 by transferring balance', time: '1 day ago' },
-    { type: 'debt', title: 'Debt Payoff Milestone', description: 'Chase Credit Card paid off!', time: '3 days ago' },
+    { type: 'debt', title: 'Debt Payoff Milestone', description: 'TD Cash Back Visa Infinite paid off!', time: '3 days ago' },
     { type: 'savings', title: 'Emergency Fund Progress', description: '83% complete - $5,000 to go!', time: '5 days ago' }
   ];
 
@@ -77,10 +77,10 @@ const financialSummary = {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {quickStats.map((stat, index) => (
           <Card key={index} className={`bg-gradient-to-br ${
-            stat.color === 'blue' ? 'from-blue-50 to-blue-100' :
-            stat.color === 'green' ? 'from-green-50 to-green-100' :
-            stat.color === 'purple' ? 'from-purple-50 to-purple-100' :
-            'from-orange-50 to-orange-100'
+            stat.color === 'blue' ? 'from-blue-50/80 to-blue-100/50 border-blue-100' :
+            stat.color === 'green' ? 'from-emerald-50/80 to-emerald-100/50 border-emerald-100' :
+            stat.color === 'purple' ? 'from-indigo-50/80 to-indigo-100/50 border-indigo-100' :
+            'from-amber-50/80 to-amber-100/50 border-amber-100'
           }`}>
             <div className="flex items-center justify-between">
               <div>

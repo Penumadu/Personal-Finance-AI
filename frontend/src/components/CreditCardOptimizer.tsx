@@ -14,9 +14,9 @@ const COLORS = ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899'
 
 const CreditCardOptimizer: React.FC = () => {
   const [cards, setCards] = useState<CardData[]>([
-    { card_name: 'Chase Freedom', balance: '5000', apr: '24.99', credit_limit: '10000' },
-    { card_name: 'Citi Double Cash', balance: '3000', apr: '21.99', credit_limit: '8000' },
-    { card_name: 'Discover It', balance: '1500', apr: '18.99', credit_limit: '5000' }
+    { card_name: 'TD Cash Back Visa Infinite', balance: '5000', apr: '24.99', credit_limit: '10000' },
+    { card_name: 'Scotiabank Gold Amex', balance: '3000', apr: '21.99', credit_limit: '8000' },
+    { card_name: 'BMO CashBack Mastercard', balance: '1500', apr: '18.99', credit_limit: '5000' }
   ]);
   
   const [activeTab, setActiveTab] = useState<'cards' | 'optimize' | 'transfer'>('cards');

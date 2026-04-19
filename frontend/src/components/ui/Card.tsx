@@ -9,10 +9,10 @@ interface CardProps {
 
 export const Card: React.FC<CardProps> = ({ children, className = '', title, subtitle }) => {
   return (
-    <div className={`bg-white rounded-xl shadow-md border border-gray-100 ${className}`}>
+    <div className={`glass rounded-2xl transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${className}`}>
       {(title || subtitle) && (
-        <div className="px-6 py-4 border-b border-gray-100">
-          {title && <h3 className="text-lg font-semibold text-gray-900">{title}</h3>}
+        <div className="px-6 py-5 border-b border-gray-100/50 bg-white/40 rounded-t-2xl">
+          {title && <h3 className="text-lg font-heading font-semibold text-gray-900">{title}</h3>}
           {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
         </div>
       )}
