@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, AreaChart, Area, Legend } from 'recharts';
-import { TrendingUp, ArrowUpRight, AlertCircle, DollarSign, Percent, Home, Calculator, Save, Clock, ChevronRight, Building2, TrendingDown, Globe, Info, Leaf, BarChart3 } from 'lucide-react';
+import { TrendingUp, ArrowUpRight, AlertCircle, DollarSign, Percent, Home, Calculator, Save, Clock, ChevronRight, Building2, TrendingDown, Globe, Info, Leaf, BarChart3, X } from 'lucide-react';
 import Card from './ui/Card';
+import { db } from '../lib/firebase';
+import { collection, addDoc, query, where, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
 
 interface Property {
   id: string;
@@ -20,38 +23,32 @@ interface Property {
 }
 
 const MortgageAnalyzer: React.FC = () => {
-  const [properties, setProperties] = useState<Property[]>([
-    {
-      id: '1',
-      name: 'Primary Residence',
-      address: '123 Main St, Toronto, ON',
-      propertyValue: '750000',
-      currentBalance: '450000',
-      interestRate: '5.79',
-      monthlyPayment: '2850',
-      originalAmount: '600000',
-      startDate: '2023-06-01',
-      termMonths: '300',
-      loanType: 'fixed',
-      renewalDate: '2028-06-01',
-      paymentFrequency: 'monthly'
-    },
-    {
-      id: '2',
-      name: 'Rental Property',
-      address: '456 Oak Ave, Vancouver, BC',
-      propertyValue: '950000',
-      currentBalance: '620000',
-      interestRate: '6.25',
-      monthlyPayment: '4100',
-      originalAmount: '760000',
-      startDate: '2022-03-15',
-      termMonths: '300',
-      loanType: 'variable',
-      renewalDate: '2027-03-15',
-      paymentFrequency: 'accelerated'
-    }
-  ]);
+  const { user } = useAuth();
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(
+      collection(db, 'mortgages'),
+      where('userId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const propertyData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Property[];
+      setProperties(propertyData);
+      setLoading(false);
+      if (propertyData.length > 0 && !selectedProperty) {
+        setSelectedProperty(propertyData[0]);
+      }
+    });
+
+    return unsubscribe;
+  }, [user]);
 
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(properties[0]);
   const [activeTab, setActiveTab] = useState<'overview' | 'analysis' | 'forecast'>('overview');
@@ -197,23 +194,39 @@ const MortgageAnalyzer: React.FC = () => {
     return recommendations;
   };
 
-  const handleAddProperty = () => {
-    if (!newProperty.name || !newProperty.currentBalance) return;
+  const handleAddProperty = async () => {
+    if (!newProperty.name || !newProperty.currentBalance || !user) return;
     
-    const property: Property = {
-      id: Date.now().toString(),
-      ...newProperty as Property
-    };
-    
-    setProperties(prev => [...prev, property]);
-    setSelectedProperty(property);
-    setShowAddProperty(false);
-    setNewProperty({
-      name: '', address: '', propertyValue: '', currentBalance: '',
-      interestRate: '', monthlyPayment: '', originalAmount: '',
-      startDate: '', termMonths: '300', loanType: 'fixed',
-      renewalDate: '', paymentFrequency: 'monthly'
-    });
+    try {
+      await addDoc(collection(db, 'mortgages'), {
+        ...newProperty,
+        userId: user.uid,
+        createdAt: new Date().toISOString()
+      });
+      
+      setShowAddProperty(false);
+      setNewProperty({
+        name: '', address: '', propertyValue: '', currentBalance: '',
+        interestRate: '', monthlyPayment: '', originalAmount: '',
+        startDate: '', termMonths: '300', loanType: 'fixed',
+        renewalDate: '', paymentFrequency: 'monthly'
+      });
+    } catch (error) {
+      console.error("Error adding property: ", error);
+    }
+  };
+
+  const removeProperty = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this property?')) return;
+    try {
+      await deleteDoc(doc(db, 'mortgages', id));
+      if (selectedProperty?.id === id) {
+        setSelectedProperty(properties.find(p => p.id !== id) || null);
+      }
+    } catch (error) {
+      console.error("Error removing property: ", error);
+    }
   };
 
   const totalPortfolioValue = properties.reduce((sum, p) => sum + parseFloat(p.propertyValue), 0);
@@ -304,6 +317,12 @@ const MortgageAnalyzer: React.FC = () => {
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
+                  <button 
+                    onClick={(e) => removeProperty(property.id, e)}
+                    className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                   <div className="flex items-start justify-between">
                     <div>
                       <h4 className="font-semibold text-gray-900">{property.name}</h4>

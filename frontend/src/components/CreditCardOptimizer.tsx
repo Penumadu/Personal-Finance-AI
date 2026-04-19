@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { CreditCard, ArrowUpRight, Zap, Target, Plus } from 'lucide-react';
+import { CreditCard, ArrowUpRight, Zap, Target, Plus, X } from 'lucide-react';
 import Card from './ui/Card';
+import { db } from '../lib/firebase';
+import { collection, addDoc, query, where, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
 
 interface CardData {
   card_name: string;
@@ -13,19 +16,62 @@ interface CardData {
 const COLORS = ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899'];
 
 const CreditCardOptimizer: React.FC = () => {
-  const [cards, setCards] = useState<CardData[]>([
-    { card_name: 'TD Cash Back Visa Infinite', balance: '5000', apr: '24.99', credit_limit: '10000' },
-    { card_name: 'Scotiabank Gold Amex', balance: '3000', apr: '21.99', credit_limit: '8000' },
-    { card_name: 'BMO CashBack Mastercard', balance: '1500', apr: '18.99', credit_limit: '5000' }
-  ]);
+  const { user } = useAuth();
+  const [cards, setCards] = useState<CardData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(
+      collection(db, 'credit_cards'),
+      where('userId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const cardData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as any[];
+      setCards(cardData);
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [user]);
   
   const [activeTab, setActiveTab] = useState<'cards' | 'optimize' | 'transfer'>('cards');
   const [optimizationResult, setOptimizationResult] = useState<any>(null);
   const [balanceTransferResult, setBalanceTransferResult] = useState<any>(null);
   
-  const [, setNewCard] = useState<CardData>({ card_name: '', balance: '', apr: '', credit_limit: '' });
+  const [showAddCard, setShowAddCard] = useState(false);
+  const [newCard, setNewCard] = useState<CardData>({ card_name: '', balance: '', apr: '', credit_limit: '' });
   const [optimizeForm, setOptimizeForm] = useState({ total_debt: '9500', monthly_payment: '500', credit_score: '720' });
   const [transferForm, setTransferForm] = useState({ current_balance: '5000', current_apr: '24.99', promo_apr: '0', promo_months: '18', transfer_fee: '3' });
+
+  const handleAddCard = async () => {
+    if (!newCard.card_name || !user) return;
+    try {
+      await addDoc(collection(db, 'credit_cards'), {
+        ...newCard,
+        userId: user.uid,
+        createdAt: new Date().toISOString()
+      });
+      setShowAddCard(false);
+      setNewCard({ card_name: '', balance: '', apr: '', credit_limit: '' });
+    } catch (error) {
+      console.error("Error adding card: ", error);
+    }
+  };
+
+  const removeCard = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this card?')) return;
+    try {
+      await deleteDoc(doc(db, 'credit_cards', id));
+    } catch (error) {
+      console.error("Error removing card: ", error);
+    }
+  };
 
   const optimizeCards = () => {
     setOptimizationResult({
@@ -89,11 +135,11 @@ const CreditCardOptimizer: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card title="Your Credit Cards" className="lg:col-span-2">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {cards.map((card, index) => {
+              {cards.map((card: any, index) => {
                 const utilization = (parseFloat(card.balance) / parseFloat(card.credit_limit)) * 100;
                 return (
-                  <div key={index} className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200 relative group">
-                    <button onClick={() => setCards(cards.filter((_, i) => i !== index))} className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100">×</button>
+                  <div key={card.id} className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200 relative group">
+                    <button onClick={() => removeCard(card.id)} className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-4 h-4" /></button>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center"><CreditCard className="w-5 h-5 text-white" /></div>
@@ -109,11 +155,46 @@ const CreditCardOptimizer: React.FC = () => {
                   </div>
                 );
               })}
-              <div className="p-4 border border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                <button onClick={() => setNewCard({ card_name: 'New Card', balance: '1000', apr: '20', credit_limit: '5000' })} className="text-gray-400 hover:text-gray-600"><Plus className="w-8 h-8" /></button>
+              <div className="p-4 border border-dashed border-gray-300 rounded-lg flex items-center justify-center min-h-[140px]">
+                <button onClick={() => setShowAddCard(true)} className="flex flex-col items-center gap-2 text-gray-400 hover:text-blue-600 transition-colors">
+                  <Plus className="w-8 h-8" />
+                  <span className="text-sm font-medium">Add New Card</span>
+                </button>
               </div>
             </div>
           </Card>
+
+          {showAddCard && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold">Add Credit Card</h3>
+                  <button onClick={() => setShowAddCard(false)} className="text-gray-400 hover:text-gray-600"><X className="w-6 h-6" /></button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Card Name</label>
+                    <input type="text" placeholder="e.g. TD Cash Back" value={newCard.card_name} onChange={e => setNewCard({...newCard, card_name: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Balance ($)</label>
+                      <input type="number" value={newCard.balance} onChange={e => setNewCard({...newCard, balance: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">APR (%)</label>
+                      <input type="number" step="0.01" value={newCard.apr} onChange={e => setNewCard({...newCard, apr: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Credit Limit ($)</label>
+                    <input type="number" value={newCard.credit_limit} onChange={e => setNewCard({...newCard, credit_limit: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+                  </div>
+                  <button onClick={handleAddCard} className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold shadow-lg shadow-blue-500/20">Save Card</button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-4">
             <Card title="Summary">
