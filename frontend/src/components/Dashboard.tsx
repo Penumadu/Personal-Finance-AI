@@ -155,7 +155,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       {/* Cash Flow Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card title="Cash Flow Trend" subtitle="Last 6 months" className="lg:col-span-2">
-          <div className="h-64">
+          <div className="h-48 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={cashFlowData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -204,7 +204,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Asset Breakdown */}
         <Card title="Asset Allocation">
-          <div className="h-56">
+          <div className="h-48 sm:h-56">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie data={assetBreakdown} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value">
@@ -229,7 +229,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         {/* Debt Breakdown */}
         <Card title="Debt Distribution">
-          <div className="h-56">
+          <div className="h-48 sm:h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={debtBreakdown} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />

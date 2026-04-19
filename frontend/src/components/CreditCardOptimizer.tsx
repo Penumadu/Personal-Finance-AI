@@ -118,21 +118,21 @@ const CreditCardOptimizer: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+          <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center shrink-0">
             <CreditCard className="w-6 h-6 text-purple-600" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Credit Card Optimizer</h2>
-            <p className="text-gray-500">Analyze and optimize your credit card debt</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Credit Card Optimizer</h2>
+            <p className="text-xs sm:text-sm text-gray-500">Analyze and optimize your credit card debt</p>
           </div>
         </div>
       </div>
 
-      <div className="flex gap-4 border-b border-gray-200 pb-4">
+      <div className="flex gap-2 sm:gap-4 border-b border-gray-200 pb-2 overflow-x-auto no-scrollbar whitespace-nowrap">
         {['cards', 'optimize', 'transfer'].map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab as any)} className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize ${activeTab === tab ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          <button key={tab} onClick={() => setActiveTab(tab as any)} className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors capitalize ${activeTab === tab ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             {tab === 'transfer' ? 'Balance Transfer' : tab}
           </button>
         ))}

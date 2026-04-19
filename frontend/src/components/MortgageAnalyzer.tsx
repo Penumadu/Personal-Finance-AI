@@ -249,65 +249,65 @@ const MortgageAnalyzer: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+          <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
             <Building2 className="w-6 h-6 text-blue-600" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Mortgage Analyzer</h2>
-            <p className="text-gray-500">Canadian Real Estate Portfolio Management</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Mortgage Analyzer</h2>
+            <p className="text-xs sm:text-sm text-gray-500">Canadian Real Estate Portfolio Management</p>
           </div>
         </div>
-        <button onClick={() => setShowAddProperty(true)} className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
+        <button onClick={() => setShowAddProperty(true)} className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2">
           <Home className="w-4 h-4" />
           Add Property
         </button>
       </div>
 
       {/* Portfolio Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 p-3 sm:p-4">
           <div className="text-center">
-            <p className="text-sm text-blue-600 font-medium">Portfolio Value</p>
-            <p className="text-xl font-bold text-blue-900 mt-1">${totalPortfolioValue.toLocaleString()}</p>
+            <p className="text-[10px] sm:text-sm text-blue-600 font-medium uppercase tracking-wider">Portfolio Value</p>
+            <p className="text-lg sm:text-xl font-bold text-blue-900 mt-1">${totalPortfolioValue.toLocaleString()}</p>
           </div>
         </Card>
-        <Card className="bg-gradient-to-br from-red-50 to-red-100">
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 p-3 sm:p-4">
           <div className="text-center">
-            <p className="text-sm text-red-600 font-medium">Total Mortgage</p>
-            <p className="text-xl font-bold text-red-900 mt-1">${totalMortgageBalance.toLocaleString()}</p>
+            <p className="text-[10px] sm:text-sm text-red-600 font-medium uppercase tracking-wider">Total Mortgage</p>
+            <p className="text-lg sm:text-xl font-bold text-red-900 mt-1">${totalMortgageBalance.toLocaleString()}</p>
           </div>
         </Card>
-        <Card className="bg-gradient-to-br from-green-50 to-green-100">
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 p-3 sm:p-4">
           <div className="text-center">
-            <p className="text-sm text-green-600 font-medium">Total Equity</p>
-            <p className="text-xl font-bold text-green-900 mt-1">${totalEquity.toLocaleString()}</p>
+            <p className="text-[10px] sm:text-sm text-green-600 font-medium uppercase tracking-wider">Total Equity</p>
+            <p className="text-lg sm:text-xl font-bold text-green-900 mt-1">${totalEquity.toLocaleString()}</p>
           </div>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 p-3 sm:p-4">
           <div className="text-center">
-            <p className="text-sm text-purple-600 font-medium">Avg. Rate</p>
-            <p className="text-xl font-bold text-purple-900 mt-1">{weightedAvgRate.toFixed(2)}%</p>
+            <p className="text-[10px] sm:text-sm text-purple-600 font-medium uppercase tracking-wider">Avg. Rate</p>
+            <p className="text-lg sm:text-xl font-bold text-purple-900 mt-1">{weightedAvgRate.toFixed(2)}%</p>
           </div>
         </Card>
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100">
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 p-3 sm:p-4">
           <div className="text-center">
-            <p className="text-sm text-orange-600 font-medium">Properties</p>
-            <p className="text-xl font-bold text-orange-900 mt-1">{properties.length}</p>
+            <p className="text-[10px] sm:text-sm text-orange-600 font-medium uppercase tracking-wider">Properties</p>
+            <p className="text-lg sm:text-xl font-bold text-orange-900 mt-1">{properties.length}</p>
           </div>
         </Card>
       </div>
 
       {/* Property Tabs */}
-      <div className="flex gap-4 border-b border-gray-200 pb-4">
-        <button onClick={() => setActiveTab('overview')} className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'overview' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-          Property Overview
+      <div className="flex gap-2 sm:gap-4 border-b border-gray-200 pb-2 overflow-x-auto no-scrollbar whitespace-nowrap">
+        <button onClick={() => setActiveTab('overview')} className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors ${activeTab === 'overview' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          Overview
         </button>
-        <button onClick={() => setActiveTab('analysis')} className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'analysis' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-          EMI & Progression
+        <button onClick={() => setActiveTab('analysis')} className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors ${activeTab === 'analysis' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          EMI Analysis
         </button>
-        <button onClick={() => setActiveTab('forecast')} className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'forecast' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+        <button onClick={() => setActiveTab('forecast')} className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors ${activeTab === 'forecast' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
           Market Forecast
         </button>
       </div>

@@ -182,59 +182,59 @@ const InvestmentsTracker: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+          <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center shrink-0">
             <PieChartIcon className="w-6 h-6 text-green-600" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Investments Tracker</h2>
-            <p className="text-gray-500">Canadian Investment Portfolio Management</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Investments Tracker</h2>
+            <p className="text-xs sm:text-sm text-gray-500">Canadian Investment Portfolio Management</p>
           </div>
         </div>
-        <button onClick={() => setShowAddModal(true)} className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
+        <button onClick={() => setShowAddModal(true)} className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2">
           <Plus className="w-4 h-4" />
           Add Investment
         </button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 p-3 sm:p-4">
           <div className="text-center">
-            <p className="text-sm text-blue-600 font-medium">Total Portfolio</p>
-            <p className="text-2xl font-bold text-blue-900 mt-1">${totalValue.toLocaleString()}</p>
+            <p className="text-[10px] sm:text-sm text-blue-600 font-medium uppercase tracking-wider">Total Portfolio</p>
+            <p className="text-lg sm:text-2xl font-bold text-blue-900 mt-1">${totalValue.toLocaleString()}</p>
           </div>
         </Card>
-        <Card className="bg-gradient-to-br from-green-50 to-green-100">
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 p-3 sm:p-4">
           <div className="text-center">
-            <p className="text-sm text-green-600 font-medium">Weighted Return</p>
-            <p className="text-2xl font-bold text-green-900 mt-1">{weightedReturn.toFixed(2)}%</p>
+            <p className="text-[10px] sm:text-sm text-green-600 font-medium uppercase tracking-wider">Weighted Return</p>
+            <p className="text-lg sm:text-2xl font-bold text-green-900 mt-1">{weightedReturn.toFixed(2)}%</p>
           </div>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 p-3 sm:p-4">
           <div className="text-center">
-            <p className="text-sm text-purple-600 font-medium">YTD Gains</p>
-            <p className="text-2xl font-bold text-purple-900 mt-1">${totalYTD.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+            <p className="text-[10px] sm:text-sm text-purple-600 font-medium uppercase tracking-wider">YTD Gains</p>
+            <p className="text-lg sm:text-2xl font-bold text-purple-900 mt-1">${totalYTD.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
           </div>
         </Card>
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100">
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 p-3 sm:p-4">
           <div className="text-center">
-            <p className="text-sm text-orange-600 font-medium">Accounts</p>
-            <p className="text-2xl font-bold text-orange-900 mt-1">{investments.length}</p>
+            <p className="text-[10px] sm:text-sm text-orange-600 font-medium uppercase tracking-wider">Accounts</p>
+            <p className="text-lg sm:text-2xl font-bold text-orange-900 mt-1">{investments.length}</p>
           </div>
         </Card>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 border-b border-gray-200 pb-4">
-        <button onClick={() => setActiveTab('overview')} className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'overview' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-          Account Overview
+      <div className="flex gap-2 sm:gap-4 border-b border-gray-200 pb-2 overflow-x-auto no-scrollbar whitespace-nowrap">
+        <button onClick={() => setActiveTab('overview')} className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors ${activeTab === 'overview' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          Overview
         </button>
-        <button onClick={() => setActiveTab('breakdown')} className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'breakdown' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-          Asset Breakdown
+        <button onClick={() => setActiveTab('breakdown')} className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors ${activeTab === 'breakdown' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          Breakdown
         </button>
-        <button onClick={() => setActiveTab('performance')} className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'performance' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+        <button onClick={() => setActiveTab('performance')} className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors ${activeTab === 'performance' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
           Performance
         </button>
       </div>

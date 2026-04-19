@@ -86,7 +86,7 @@ const AppContent: React.FC = () => {
 
       <div className="flex max-w-7xl mx-auto">
         {/* Sidebar */}
-        <nav className="w-64 hidden lg:block py-8 pr-8">
+        <nav className="w-64 hidden lg:block py-8 pr-8 sticky top-24 h-[calc(100vh-6rem)]">
           <div className="space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -111,8 +111,29 @@ const AppContent: React.FC = () => {
           </div>
         </nav>
 
+        {/* Mobile Navigation (Bottom Bar) */}
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+          <div className="flex justify-between items-center max-w-md mx-auto">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setCurrentPage(item.id)}
+                  className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
+                    currentPage === item.id ? 'text-blue-600' : 'text-gray-500'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="text-[10px] font-medium">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+
         {/* Main Content */}
-        <main className="flex-1 py-8 overflow-hidden">
+        <main className="flex-1 py-6 px-4 lg:py-8 lg:pr-0 overflow-hidden mb-20 lg:mb-0">
           <div className="w-full mx-auto">{renderPage()}</div>
         </main>
       </div>

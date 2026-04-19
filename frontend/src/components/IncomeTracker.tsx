@@ -135,48 +135,48 @@ const IncomeTracker: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Income Tracker</h2>
-          <p className="text-gray-500 mt-1">Manage your income sources and track earnings</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Income Tracker</h2>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">Manage your income sources and track earnings</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          <Plus className="w-4h-4" />
+          <Plus className="w-4 h-4" />
           Add Income
         </button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-green-50 to-green-100">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 p-3 sm:p-4">
           <div className="text-center">
-            <DollarSign className="w-8 h-8 mx-auto mb-2 text-green-600" />
-            <p className="text-sm text-green-600 font-medium">Monthly Income</p>
-            <p className="text-2xl font-bold text-green-900 mt-1">${totalMonthly.toLocaleString()}</p>
+            <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-green-600" />
+            <p className="text-[10px] sm:text-sm text-green-600 font-medium uppercase tracking-wider">Monthly</p>
+            <p className="text-lg sm:text-2xl font-bold text-green-900 mt-1">${totalMonthly.toLocaleString()}</p>
           </div>
         </Card>
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 p-3 sm:p-4">
           <div className="text-center">
-            <Calendar className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-            <p className="text-sm text-blue-600 font-medium">Annual Income</p>
-            <p className="text-2xl font-bold text-blue-900 mt-1">${totalAnnual.toLocaleString()}</p>
+            <Calendar className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-blue-600" />
+            <p className="text-[10px] sm:text-sm text-blue-600 font-medium uppercase tracking-wider">Annual</p>
+            <p className="text-lg sm:text-2xl font-bold text-blue-900 mt-1">${totalAnnual.toLocaleString()}</p>
           </div>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 p-3 sm:p-4">
           <div className="text-center">
-            <PiggyBank className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-            <p className="text-sm text-purple-600 font-medium">Income Sources</p>
-            <p className="text-2xl font-bold text-purple-900 mt-1">{sources.length}</p>
+            <PiggyBank className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-purple-600" />
+            <p className="text-[10px] sm:text-sm text-purple-600 font-medium uppercase tracking-wider">Sources</p>
+            <p className="text-lg sm:text-2xl font-bold text-purple-900 mt-1">{sources.length}</p>
           </div>
         </Card>
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100">
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 p-3 sm:p-4">
           <div className="text-center">
-            <TrendingUp className="w-8 h-8 mx-auto mb-2 text-orange-600" />
-            <p className="text-sm text-orange-600 font-medium">Avg per Source</p>
-            <p className="text-2xl font-bold text-orange-900 mt-1">${(totalMonthly / sources.length || 0).toFixed(0)}</p>
+            <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-orange-600" />
+            <p className="text-[10px] sm:text-sm text-orange-600 font-medium uppercase tracking-wider">Avg/Source</p>
+            <p className="text-lg sm:text-2xl font-bold text-orange-900 mt-1">${(totalMonthly / sources.length || 0).toFixed(0)}</p>
           </div>
         </Card>
       </div>
