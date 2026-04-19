@@ -1,5 +1,7 @@
 import React from 'react';
 import { Home, CreditCard, DollarSign, TrendingUp, Target, Settings, PieChart, X, User, Bell, Shield, Moon } from 'lucide-react';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import LoginPage from './components/auth/LoginPage';
 import MortgageAnalyzer from './components/MortgageAnalyzer';
 import CreditCardOptimizer from './components/CreditCardOptimizer';
 import DebtPayoffPlanner from './components/DebtPayoffPlanner';
@@ -9,9 +11,14 @@ import Dashboard from './components/Dashboard';
 
 type Page = 'dashboard' | 'mortgage' | 'credit-card' | 'debt' | 'income' | 'investments';
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const { user, logout } = useAuth();
   const [currentPage, setCurrentPage] = React.useState<Page>('dashboard');
   const [showSettings, setShowSettings] = React.useState(false);
+
+  if (!user) {
+    return <LoginPage />;
+  }
 
   const navItems = [
     { id: 'dashboard' as Page, label: 'Dashboard', icon: Home },
@@ -57,10 +64,13 @@ const App: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <button className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100/50 rounded-full transition-all">
+              <div className="hidden md:block text-right">
+                <p className="text-xs font-medium text-gray-500">Welcome,</p>
+                <p className="text-sm font-bold text-gray-900">{user.email?.split('@')[0]}</p>
+              </div>
+              <button onClick={logout} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all" title="Logout">
                 <div className="relative">
-                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></div>
-                  <Target className="w-5 h-5" />
+                  <Target className="w-5 h-5 rotate-45" />
                 </div>
               </button>
               <button onClick={() => setShowSettings(true)} className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100/50 rounded-full transition-all">
@@ -166,6 +176,14 @@ const App: React.FC = () => {
         </div>
       )}
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 };
 
