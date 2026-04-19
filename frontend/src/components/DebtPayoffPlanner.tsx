@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Target, DollarSign, TrendingUp, Calendar, Plus, Trophy } from 'lucide-react';
+import { Target, DollarSign, TrendingUp, Calendar, Plus, Trophy, X } from 'lucide-react';
 import Card from './ui/Card';
+import { db } from '../lib/firebase';
+import { collection, addDoc, query, where, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
 
 interface Debt {
   id: string;
@@ -12,11 +15,29 @@ interface Debt {
 }
 
 const DebtPayoffPlanner: React.FC = () => {
-  const [debts, setDebts] = useState<Debt[]>([
-    { id: '1', name: 'TD Cash Back Visa Infinite', balance: '5000', interest_rate: '24.99', minimum_payment: '100' },
-    { id: '2', name: 'Student Loan', balance: '25000', interest_rate: '5.5', minimum_payment: '250' },
-    { id: '3', name: 'Car Loan', balance: '12000', interest_rate: '6.5', minimum_payment: '300' }
-  ]);
+  const { user } = useAuth();
+  const [debts, setDebts] = useState<Debt[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(
+      collection(db, 'debts'),
+      where('userId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const debtData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as any[];
+      setDebts(debtData);
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [user]);
 
   const [monthlyBudget, setMonthlyBudget] = useState('800');
   const [strategy, setStrategy] = useState<'avalanche' | 'snowball'>('avalanche');
@@ -93,16 +114,29 @@ const DebtPayoffPlanner: React.FC = () => {
     });
   };
 
-  const addDebt = () => {
-    if (newDebt.name && newDebt.balance) {
-      setDebts([...debts, { ...newDebt, id: Date.now().toString() }]);
-      setNewDebt({ id: '', name: '', balance: '', interest_rate: '', minimum_payment: '' });
-      setShowAddModal(false);
+  const addDebt = async () => {
+    if (newDebt.name && newDebt.balance && user) {
+      try {
+        await addDoc(collection(db, 'debts'), {
+          ...newDebt,
+          userId: user.uid,
+          createdAt: new Date().toISOString()
+        });
+        setNewDebt({ id: '', name: '', balance: '', interest_rate: '', minimum_payment: '' });
+        setShowAddModal(false);
+      } catch (error) {
+        console.error("Error adding debt: ", error);
+      }
     }
   };
 
-  const removeDebt = (id: string) => {
-    setDebts(debts.filter(d => d.id !== id));
+  const removeDebt = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this debt?')) return;
+    try {
+      await deleteDoc(doc(db, 'debts', id));
+    } catch (error) {
+      console.error("Error removing debt: ", error);
+    }
   };
 
   return (
@@ -122,7 +156,7 @@ const DebtPayoffPlanner: React.FC = () => {
           <div className="space-y-3">
             {debts.map((debt, index) => (
               <div key={debt.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200 relative group">
-                <button onClick={() => removeDebt(debt.id)} className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100">×</button>
+                <button onClick={() => removeDebt(debt.id)} className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-4 h-4" /></button>
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-semibold">{debt.name}</h4>
                   <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">#{index + 1}</span>
