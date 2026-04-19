@@ -1,3 +1,8 @@
+import React from 'react';
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, BarChart, Bar, Legend
+} from 'recharts';
 import { TrendingUp, CreditCard, Target, AlertTriangle, ArrowUpRight, Wallet, PiggyBank, PieChart as PieChartIcon, DollarSign } from 'lucide-react';
 import Card from './ui/Card';
 import { useAuth } from '../context/AuthContext';
