@@ -8,8 +8,10 @@ import DebtPayoffPlanner from './components/DebtPayoffPlanner';
 import IncomeTracker from './components/IncomeTracker';
 import InvestmentsTracker from './components/InvestmentsTracker';
 import Dashboard from './components/Dashboard';
+import AIInsights from './components/AIInsights';
+import { Search, LogOut, Lightbulb } from 'lucide-react';
 
-type Page = 'dashboard' | 'mortgage' | 'credit-card' | 'debt' | 'income' | 'investments';
+type Page = 'dashboard' | 'mortgage' | 'credit-card' | 'debt' | 'income' | 'investments' | 'insights';
 
 const AppContent: React.FC = () => {
   const { user, logout } = useAuth();
@@ -22,6 +24,7 @@ const AppContent: React.FC = () => {
 
   const navItems = [
     { id: 'dashboard' as Page, label: 'Dashboard', icon: Home },
+    { id: 'insights' as Page, label: 'AI Insights', icon: Lightbulb },
     { id: 'mortgage' as Page, label: 'Mortgage', icon: TrendingUp },
     { id: 'credit-card' as Page, label: 'Credit Cards', icon: CreditCard },
     { id: 'debt' as Page, label: 'Debt Payoff', icon: Target },
@@ -43,8 +46,10 @@ const AppContent: React.FC = () => {
         return <InvestmentsTracker />;
       case 'income':
         return <IncomeTracker />;
+      case 'insights':
+        return <AIInsights />;
       default:
-        return <Dashboard />;
+        return <Dashboard onNavigate={setCurrentPage} />;
     }
   };
 
