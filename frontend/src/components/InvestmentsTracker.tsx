@@ -5,6 +5,7 @@ import Card from './ui/Card';
 import { db } from '../lib/firebase';
 import { collection, addDoc, query, where, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import { SAMPLE_INVESTMENTS } from '../lib/sampleData';
 
 interface Investment {
   id: string;
@@ -25,6 +26,12 @@ const InvestmentsTracker: React.FC = () => {
 
   useEffect(() => {
     if (!user) return;
+
+    if (user.isAnonymous) {
+      setInvestments(SAMPLE_INVESTMENTS);
+      setLoading(false);
+      return;
+    }
 
     const q = query(
       collection(db, 'investments'),

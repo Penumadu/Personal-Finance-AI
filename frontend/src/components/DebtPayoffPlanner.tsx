@@ -5,6 +5,7 @@ import Card from './ui/Card';
 import { db } from '../lib/firebase';
 import { collection, addDoc, query, where, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import { SAMPLE_DEBTS } from '../lib/sampleData';
 
 interface Debt {
   id: string;
@@ -21,6 +22,12 @@ const DebtPayoffPlanner: React.FC = () => {
 
   useEffect(() => {
     if (!user) return;
+
+    if (user.isAnonymous) {
+      setDebts(SAMPLE_DEBTS);
+      setLoading(false);
+      return;
+    }
 
     const q = query(
       collection(db, 'debts'),

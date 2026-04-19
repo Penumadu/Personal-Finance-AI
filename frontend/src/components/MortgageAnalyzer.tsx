@@ -5,6 +5,7 @@ import Card from './ui/Card';
 import { db } from '../lib/firebase';
 import { collection, addDoc, query, where, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import { SAMPLE_MORTGAGES } from '../lib/sampleData';
 
 interface Property {
   id: string;
@@ -29,6 +30,15 @@ const MortgageAnalyzer: React.FC = () => {
 
   useEffect(() => {
     if (!user) return;
+
+    if (user.isAnonymous) {
+      setProperties(SAMPLE_MORTGAGES);
+      setLoading(false);
+      if (SAMPLE_MORTGAGES.length > 0 && !selectedProperty) {
+        setSelectedProperty(SAMPLE_MORTGAGES[0]);
+      }
+      return;
+    }
 
     const q = query(
       collection(db, 'mortgages'),

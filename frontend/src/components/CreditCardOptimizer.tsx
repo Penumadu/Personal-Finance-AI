@@ -5,6 +5,7 @@ import Card from './ui/Card';
 import { db } from '../lib/firebase';
 import { collection, addDoc, query, where, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import { SAMPLE_CREDIT_CARDS } from '../lib/sampleData';
 
 interface CardData {
   card_name: string;
@@ -22,6 +23,12 @@ const CreditCardOptimizer: React.FC = () => {
 
   useEffect(() => {
     if (!user) return;
+
+    if (user.isAnonymous) {
+      setCards(SAMPLE_CREDIT_CARDS);
+      setLoading(false);
+      return;
+    }
 
     const q = query(
       collection(db, 'credit_cards'),

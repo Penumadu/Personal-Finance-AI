@@ -5,6 +5,7 @@ import Card from './ui/Card';
 import { db } from '../lib/firebase';
 import { collection, addDoc, query, where, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import { SAMPLE_INCOME } from '../lib/sampleData';
 
 interface IncomeSource {
   id: string;
@@ -38,6 +39,12 @@ const IncomeTracker: React.FC = () => {
 
   useEffect(() => {
     if (!user) return;
+
+    if (user.isAnonymous) {
+      setSources(SAMPLE_INCOME);
+      setLoading(false);
+      return;
+    }
 
     const q = query(
       collection(db, 'income_sources'),

@@ -1,10 +1,9 @@
-import React from 'react';
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, BarChart, Bar, Legend
-} from 'recharts';
-import { TrendingUp, CreditCard, Target, AlertTriangle, ArrowUpRight, Wallet, PiggyBank, PieChart as PieChartIcon } from 'lucide-react';
+import { TrendingUp, CreditCard, Target, AlertTriangle, ArrowUpRight, Wallet, PiggyBank, PieChart as PieChartIcon, DollarSign } from 'lucide-react';
 import Card from './ui/Card';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../lib/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { SAMPLE_INVESTMENTS, SAMPLE_INCOME, SAMPLE_CREDIT_CARDS, SAMPLE_DEBTS, SAMPLE_MORTGAGES } from '../lib/sampleData';
 
 // Type for navigation callback
 interface DashboardProps {
@@ -12,55 +11,105 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+  const { user } = useAuth();
+  const [loading, setLoading] = React.useState(true);
+  
+  // State for fetched data
+  const [data, setData] = React.useState({
+    investments: [] as any[],
+    income: [] as any[],
+    creditCards: [] as any[],
+    debts: [] as any[],
+    mortgages: [] as any[]
+  });
+
+  React.useEffect(() => {
+    if (!user) return;
+
+    if (user.isAnonymous) {
+      setData({
+        investments: SAMPLE_INVESTMENTS,
+        income: SAMPLE_INCOME,
+        creditCards: SAMPLE_CREDIT_CARDS,
+        debts: SAMPLE_DEBTS,
+        mortgages: SAMPLE_MORTGAGES
+      });
+      setLoading(false);
+      return;
+    }
+
+    const collections = ['investments', 'income_sources', 'credit_cards', 'debts', 'mortgages'];
+    const unsubscribes: (() => void)[] = [];
+
+    collections.forEach(colName => {
+      const q = query(collection(db, colName), where('userId', '==', user.uid));
+      const unsub = onSnapshot(q, (snapshot) => {
+        const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setData(prev => ({
+          ...prev,
+          [colName === 'income_sources' ? 'income' : colName === 'credit_cards' ? 'creditCards' : colName]: docs
+        }));
+      });
+      unsubscribes.push(unsub);
+    });
+
+    setLoading(false);
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [user]);
+
+  // Calculations
+  const totalAssets = data.investments.reduce((sum, inv) => sum + parseFloat(inv.value || '0'), 0) +
+                     data.mortgages.reduce((sum, m) => sum + parseFloat(m.propertyValue || '0'), 0);
+  
+  const totalDebts = data.creditCards.reduce((sum, cc) => sum + parseFloat(cc.balance || '0'), 0) +
+                    data.debts.reduce((sum, d) => sum + parseFloat(d.balance || '0'), 0) +
+                    data.mortgages.reduce((sum, m) => sum + parseFloat(m.currentBalance || '0'), 0);
+
+  const netWorth = totalAssets - totalDebts;
+
+  const monthlyIncome = data.income.reduce((sum, inc) => {
+    const amount = parseFloat(inc.amount || '0');
+    if (inc.frequency === 'weekly') return sum + amount * 4.33;
+    if (inc.frequency === 'biweekly') return sum + amount * 2.17;
+    if (inc.frequency === 'yearly') return sum + amount / 12;
+    return sum + amount;
+  }, 0);
+
+  const monthlyDebtPayments = data.debts.reduce((sum, d) => sum + parseFloat(d.minimum_payment || '0'), 0) +
+                             data.mortgages.reduce((sum, m) => sum + parseFloat(m.monthlyPayment || '0'), 0);
+
+  // For demo purposes, we'll still use some realistic hardcoded values for historical trends 
+  // until we implement a time-series collection in Firebase
   const cashFlowData = [
-  { month: 'Jan', income: 10000, expenses: 6500, savings: 3500 },
-  { month: 'Feb', income: 10000, expenses: 6200, savings: 3800 },
-  { month: 'Mar', income: 10500, expenses: 6800, savings: 3700 },
-  { month: 'Apr', income: 10000, expenses: 6000, savings: 4000 },
-  { month: 'May', income: 10000, expenses: 6400, savings: 3600 },
-  { month: 'Jun', income: 10200, expenses: 6200, savings: 4000 },
-];
+    { month: 'Jan', income: monthlyIncome * 0.95, expenses: monthlyIncome * 0.6, savings: monthlyIncome * 0.35 },
+    { month: 'Feb', income: monthlyIncome * 0.98, expenses: monthlyIncome * 0.58, savings: monthlyIncome * 0.4 },
+    { month: 'Mar', income: monthlyIncome * 1.02, expenses: monthlyIncome * 0.62, savings: monthlyIncome * 0.4 },
+    { month: 'Apr', income: monthlyIncome, expenses: monthlyIncome * 0.6, savings: monthlyIncome * 0.4 },
+  ];
 
-const debtBreakdown = [
-  { name: 'Credit Cards', value: 8000, color: '#EF4444' },
-  { name: 'Student Loans', value: 25000, color: '#F59E0B' },
-  { name: 'Car Loan', value: 9000, color: '#8B5CF6' },
-];
+  const debtBreakdown = [
+    { name: 'Credit Cards', value: data.creditCards.reduce((sum, cc) => sum + parseFloat(cc.balance || '0'), 0), color: '#EF4444' },
+    { name: 'Loans', value: data.debts.reduce((sum, d) => sum + parseFloat(d.balance || '0'), 0), color: '#F59E0B' },
+    { name: 'Mortgages', value: data.mortgages.reduce((sum, m) => sum + parseFloat(m.currentBalance || '0'), 0), color: '#8B5CF6' },
+  ].filter(d => d.value > 0);
 
-const assetBreakdown = [
-  { name: 'Home Equity', value: 130000, color: '#3B82F6' },
-  { name: 'Savings', value: 35000, color: '#10B981' },
-  { name: 'Investments', value: 45000, color: '#6366F1' },
-  { name: 'Other', value: 5000, color: '#EC4899' },
-];
+  const assetBreakdown = [
+    { name: 'Real Estate', value: data.mortgages.reduce((sum, m) => sum + parseFloat(m.propertyValue || '0'), 0), color: '#3B82F6' },
+    { name: 'Investments', value: data.investments.reduce((sum, inv) => sum + parseFloat(inv.value || '0'), 0), color: '#10B981' },
+  ].filter(a => a.value > 0);
 
-const savingsGoalProgress = [
-  { name: 'Emergency Fund', current: 25000, target: 30000, color: '#3B82F6' },
-  { name: 'Vacation', current: 3500, target: 5000, color: '#10B981' },
-  { name: 'New Car', current: 8000, target: 15000, color: '#F59E0B' },
-];
-
-const financialSummary = {
-    totalAssets: 215000,
-    totalDebts: 42000,
-    netWorth: 173000,
-    monthlyIncome: 10200,
-    monthlyExpenses: 6350,
-    monthlySavings: 3850
-  };
+  const quickStats = [
+    { label: 'Net Worth', value: `$${(netWorth / 1000).toFixed(1)}K`, change: '+4.2%', trend: 'up', color: 'blue' },
+    { label: 'Monthly Income', value: `$${monthlyIncome.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, change: '+3%', trend: 'up', color: 'green' },
+    { label: 'Total Debt', value: `$${(totalDebts / 1000).toFixed(1)}K`, change: '-2.1%', trend: 'down', color: 'purple' },
+    { label: 'Debt Ratio', value: `${((totalDebts / totalAssets) * 100 || 0).toFixed(1)}%`, change: 'On track', trend: 'neutral', color: 'orange' }
+  ];
 
   const recentActivity = [
     { type: 'mortgage', title: 'Mortgage Rate Alert', description: 'Rates dropped 0.25% - Consider refinancing', time: '2 hours ago' },
     { type: 'credit', title: 'Credit Card Optimization', description: 'You could save $3,200 by transferring balance', time: '1 day ago' },
-    { type: 'debt', title: 'Debt Payoff Milestone', description: 'TD Cash Back Visa Infinite paid off!', time: '3 days ago' },
-    { type: 'savings', title: 'Emergency Fund Progress', description: '83% complete - $5,000 to go!', time: '5 days ago' }
-  ];
-
-  const quickStats = [
-    { label: 'Net Worth', value: '$173K', change: '+4.2%', trend: 'up', color: 'blue' },
-    { label: 'Savings Rate', value: '38%', change: '+3%', trend: 'up', color: 'green' },
-    { label: 'Debt Ratio', value: '19.5%', change: '-2.1%', trend: 'down', color: 'purple' },
-    { label: 'Emergency Fund', value: '83%', change: 'On track', trend: 'neutral', color: 'orange' }
+    { type: 'debt', title: 'Debt Payoff Milestone', description: 'Major progress on student loans!', time: '3 days ago' },
+    { type: 'savings', title: 'Savings Goal Update', description: 'You are on track for your emergency fund', time: '5 days ago' }
   ];
 
   return (
@@ -124,7 +173,7 @@ const financialSummary = {
               <div className="text-center">
                 <p className="text-sm text-green-600 font-medium">Total Net Worth</p>
                 <p className="text-3xl font-bold text-green-900 mt-1">
-                  ${financialSummary.netWorth.toLocaleString()}
+                  ${netWorth.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </p>
               </div>
             </div>
@@ -132,13 +181,13 @@ const financialSummary = {
               <div className="p-3 bg-blue-50 rounded-lg text-center">
                 <p className="text-xs text-blue-600">Assets</p>
                 <p className="text-lg font-bold text-blue-900">
-                  ${(financialSummary.totalAssets/1000).toFixed(0)}K
+                  ${(totalAssets/1000).toFixed(0)}K
                 </p>
               </div>
               <div className="p-3 bg-red-50 rounded-lg text-center">
                 <p className="text-xs text-red-600">Debts</p>
                 <p className="text-lg font-bold text-red-900">
-                  ${(financialSummary.totalDebts/1000).toFixed(0)}K
+                  ${(totalDebts/1000).toFixed(0)}K
                 </p>
               </div>
             </div>
@@ -204,8 +253,11 @@ const financialSummary = {
       {/* Savings Goals */}
       <Card title="Savings Goals Progress">
         <div className="space-y-4">
-          {savingsGoalProgress.map((goal, index) => {
-            const progress = (goal.current / goal.target) * 100;
+          {[
+            { name: 'Emergency Fund', current: data.investments.reduce((sum, i) => i.type === 'savings' ? sum + parseFloat(i.value) : sum, 0), target: 30000, color: '#3B82F6' },
+            { name: 'Investment Goal', current: data.investments.reduce((sum, i) => i.type !== 'savings' ? sum + parseFloat(i.value) : sum, 0), target: 250000, color: '#10B981' }
+          ].filter(goal => goal.current > 0 || goal.target > 0).map((goal, index) => {
+            const progress = Math.min(100, (goal.current / goal.target) * 100);
             return (
               <div key={index} className="space-y-2">
                 <div className="flex items-center justify-between">
