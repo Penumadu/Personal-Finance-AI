@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signInAnonymously } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { DollarSign, Mail, Lock, ArrowRight, Github } from 'lucide-react';
 
@@ -33,6 +33,18 @@ const LoginPage: React.FC = () => {
       await signInWithPopup(auth, provider);
     } catch (err: any) {
       setError(err.message);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      await signInAnonymously(auth);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -118,9 +130,12 @@ const LoginPage: React.FC = () => {
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/pwa_g_logo.png" className="w-5 h-5" alt="Google" />
                 Google
               </button>
-              <button className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-medium py-2.5 rounded-xl transition-all">
-                <Github className="w-5 h-5" />
-                GitHub
+              <button 
+                onClick={handleGuestLogin}
+                className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-medium py-2.5 rounded-xl transition-all"
+              >
+                <DollarSign className="w-5 h-5 text-blue-500" />
+                Guest
               </button>
             </div>
 
