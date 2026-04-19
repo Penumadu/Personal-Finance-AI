@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, CreditCard, DollarSign, TrendingUp, Target, Settings, PieChart, X, User, Bell, Shield, Moon } from 'lucide-react';
+import { Home, CreditCard, DollarSign, TrendingUp, Target, Settings, PieChart, X, User, Bell, Shield, Moon, Search, LogOut } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './components/auth/LoginPage';
 import MortgageAnalyzer from './components/MortgageAnalyzer';
@@ -20,14 +20,31 @@ const AppContent: React.FC = () => {
     return <LoginPage />;
   }
 
-  const navItems = [
-    { id: 'dashboard' as Page, label: 'Dashboard', icon: Home },
-    { id: 'mortgage' as Page, label: 'Mortgage', icon: TrendingUp },
-    { id: 'credit-card' as Page, label: 'Credit Cards', icon: CreditCard },
-    { id: 'debt' as Page, label: 'Debt Payoff', icon: Target },
-    { id: 'investments' as Page, label: 'Investments', icon: PieChart },
-    { id: 'income' as Page, label: 'Income', icon: DollarSign },
+  const navSections = [
+    {
+      title: 'Main',
+      items: [
+        { id: 'dashboard' as Page, label: 'Dashboard', icon: Home },
+      ]
+    },
+    {
+      title: 'Calculators & Analysis',
+      items: [
+        { id: 'mortgage' as Page, label: 'Mortgage Analyzer', icon: TrendingUp },
+        { id: 'credit-card' as Page, label: 'Card Optimizer', icon: CreditCard },
+        { id: 'debt' as Page, label: 'Debt Planner', icon: Target },
+      ]
+    },
+    {
+      title: 'Management',
+      items: [
+        { id: 'investments' as Page, label: 'Investments', icon: PieChart },
+        { id: 'income' as Page, label: 'Income Sources', icon: DollarSign },
+      ]
+    }
   ];
+
+  const navItems = navSections.flatMap(s => s.items);
 
   const renderPage = () => {
     switch (currentPage) {
@@ -63,21 +80,47 @@ const AppContent: React.FC = () => {
                 <p className="text-[11px] font-medium text-blue-600 tracking-wide uppercase">AI-Powered Advisor</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="hidden md:block text-right">
-                <p className="text-xs font-medium text-gray-500">Welcome,</p>
-                <p className="text-sm font-bold text-gray-900">{user.email?.split('@')[0]}</p>
-              </div>
-              <button onClick={logout} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all" title="Logout">
-                <div className="relative">
-                  <Target className="w-5 h-5 rotate-45" />
+            <div className="hidden md:flex flex-1 max-w-md mx-8">
+              <div className="relative w-full group">
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                 </div>
+                <input
+                  type="text"
+                  placeholder="Search features, insights..."
+                  className="w-full bg-gray-100/50 border-none rounded-xl py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 sm:gap-4">
+              <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors relative">
+                <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></div>
+                <Bell className="w-5 h-5" />
               </button>
-              <button onClick={() => setShowSettings(true)} className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100/50 rounded-full transition-all">
-                <Settings className="w-5 h-5" />
-              </button>
-              <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-emerald-400 to-emerald-600 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center cursor-pointer">
-                <span className="text-white text-xs font-bold">SR</span>
+              
+              <div className="h-8 w-px bg-gray-200 hidden sm:block mx-2"></div>
+
+              <div className="flex items-center gap-3 group cursor-pointer">
+                <div className="hidden sm:block text-right">
+                  <p className="text-xs font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                    {user?.isAnonymous ? 'Guest User' : user?.email?.split('@')[0]}
+                  </p>
+                  <p className="text-[10px] text-gray-500">Free Account</p>
+                </div>
+                <div 
+                  onClick={() => setShowSettings(true)}
+                  className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center border border-gray-200 group-hover:border-blue-200 transition-all overflow-hidden"
+                >
+                  <User className="w-5 h-5 text-gray-400" />
+                </div>
+                <button 
+                  onClick={logout}
+                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                  title="Logout"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
@@ -86,28 +129,50 @@ const AppContent: React.FC = () => {
 
       <div className="flex max-w-7xl mx-auto">
         {/* Sidebar */}
-        <nav className="w-64 hidden lg:block py-8 pr-8 sticky top-24 h-[calc(100vh-6rem)]">
-          <div className="space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setCurrentPage(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 group relative ${
-                    currentPage === item.id
-                      ? 'bg-white shadow-sm border border-gray-200/50 text-blue-700 font-semibold'
-                      : 'text-gray-600 hover:bg-gray-100/50 hover:text-gray-900 font-medium'
-                  }`}
-                >
-                  {currentPage === item.id && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-600 rounded-r-full"></div>
-                  )}
-                  <Icon className={`w-5 h-5 ${currentPage === item.id ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-                  <span>{item.label}</span>
+        <nav className="w-72 hidden lg:block py-8 pr-8 sticky top-24 h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar">
+          <div className="space-y-8">
+            {navSections.map((section) => (
+              <div key={section.title}>
+                <h3 className="px-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4">
+                  {section.title}
+                </h3>
+                <div className="space-y-1">
+                  {section.items.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setCurrentPage(item.id)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 group relative ${
+                          currentPage === item.id
+                            ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                            : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 font-medium'
+                        }`}
+                      >
+                        <Icon className={`w-5 h-5 ${currentPage === item.id ? 'text-white' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                        <span className="text-sm">{item.label}</span>
+                        {currentPage === item.id && (
+                          <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white/50"></div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {/* Pro Upgrade Card */}
+            <div className="mt-8 p-4 bg-gradient-to-br from-gray-900 to-slate-800 rounded-2xl text-white shadow-xl relative overflow-hidden group">
+              <div className="absolute -top-4 -right-4 w-24 h-24 bg-blue-500/20 rounded-full blur-2xl group-hover:bg-blue-500/40 transition-all"></div>
+              <div className="relative z-10">
+                <p className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">Pro Plan</p>
+                <h4 className="text-sm font-bold mb-1">Unlock AI Insights</h4>
+                <p className="text-[10px] text-gray-400 mb-3">Get personalized strategies and market alerts.</p>
+                <button className="w-full py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-bold transition-colors">
+                  Upgrade Now
                 </button>
-              );
-            })}
+              </div>
+            </div>
           </div>
         </nav>
 
