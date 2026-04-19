@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { DollarSign, Plus, Trash2, TrendingUp, Calendar, PiggyBank } from 'lucide-react';
+import { DollarSign, Plus, Trash2, TrendingUp, Calendar, PiggyBank, X } from 'lucide-react';
 import Card from './ui/Card';
+import { db } from '../lib/firebase';
+import { collection, addDoc, query, where, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
 
 interface IncomeSource {
   id: string;
@@ -29,12 +32,29 @@ const frequencyMultipliers: Record<string, number> = {
 };
 
 const IncomeTracker: React.FC = () => {
-  const [sources, setSources] = useState<IncomeSource[]>([
-    { id: '1', source_type: 'salary', source_name: 'Software Engineer', amount: '8500', frequency: 'monthly' },
-    { id: '2', source_type: 'freelance', source_name: 'Web Development', amount: '1500', frequency: 'monthly' },
-    { id: '3', source_type: 'investment', source_name: 'Dividends', amount: '400', frequency: 'monthly' },
-    { id: '4', source_type: 'rental', source_name: 'Rental Property', amount: '1200', frequency: 'monthly' }
-  ]);
+  const { user } = useAuth();
+  const [sources, setSources] = useState<IncomeSource[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(
+      collection(db, 'income_sources'),
+      where('userId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const sourceData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as any[];
+      setSources(sourceData);
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [user]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newSource, setNewSource] = useState<IncomeSource>({
@@ -76,16 +96,29 @@ const IncomeTracker: React.FC = () => {
     ];
   };
 
-  const addSource = () => {
-    if (newSource.source_name && newSource.amount) {
-      setSources([...sources, { ...newSource, id: Date.now().toString() }]);
-      setNewSource({ id: '', source_type: 'salary', source_name: '', amount: '', frequency: 'monthly' });
-      setShowAddModal(false);
+  const addSource = async () => {
+    if (newSource.source_name && newSource.amount && user) {
+      try {
+        await addDoc(collection(db, 'income_sources'), {
+          ...newSource,
+          userId: user.uid,
+          createdAt: new Date().toISOString()
+        });
+        setNewSource({ id: '', source_type: 'salary', source_name: '', amount: '', frequency: 'monthly' });
+        setShowAddModal(false);
+      } catch (error) {
+        console.error("Error adding income source: ", error);
+      }
     }
   };
 
-  const removeSource = (id: string) => {
-    setSources(sources.filter(s => s.id !== id));
+  const removeSource = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this income source?')) return;
+    try {
+      await deleteDoc(doc(db, 'income_sources', id));
+    } catch (error) {
+      console.error("Error removing income source: ", error);
+    }
   };
 
   const totalMonthly = calculateMonthlyIncome();

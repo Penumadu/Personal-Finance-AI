@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, Plus, Trash2, Building2, Briefcase, Wallet, PiggyBank, Landmark, Target, PieChart as PieChartIcon, ArrowUpRight, ArrowDownRight, Shield, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Plus, Trash2, Building2, Briefcase, Wallet, PiggyBank, Landmark, Target, PieChart as PieChartIcon, ArrowUpRight, ArrowDownRight, Shield, Calendar, X } from 'lucide-react';
 import Card from './ui/Card';
+import { db } from '../lib/firebase';
+import { collection, addDoc, query, where, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
 
 interface Investment {
   id: string;
@@ -16,16 +19,29 @@ interface Investment {
 }
 
 const InvestmentsTracker: React.FC = () => {
-  const [investments, setInvestments] = useState<Investment[]>([
-    { id: '1', name: 'TFSA - High Interest Savings', type: 'tfsa', value: '45000', return_rate: '4.5', ytd_return: '2.1', provider: 'EQ Bank', risk_level: 'low', last_updated: '2026-04-15' },
-    { id: '2', name: 'RRSP - Index Fund', type: 'rrsp', value: '125000', return_rate: '8.2', ytd_return: '5.4', provider: 'Questrade', risk_level: 'medium', last_updated: '2026-04-15' },
-    { id: '3', name: 'TFSA - Canadian Stocks', type: 'tfsa', value: '28000', return_rate: '12.5', ytd_return: '8.2', provider: 'Wealthsimple', risk_level: 'high', last_updated: '2026-04-15' },
-    { id: '4', name: 'Rental Property - Condo', type: 'rental', value: '320000', return_rate: '6.8', ytd_return: '3.2', provider: 'Personal', risk_level: 'medium', last_updated: '2026-04-10' },
-    { id: '5', name: 'Non-Reg - US Tech Stocks', type: 'non_registered', value: '55000', return_rate: '15.3', ytd_return: '12.1', provider: 'IBKR', risk_level: 'high', last_updated: '2026-04-15' },
-    { id: '6', name: 'GIC - 1 Year', type: 'gics', value: '25000', return_rate: '5.2', ytd_return: '1.3', provider: 'Oaken Financial', risk_level: 'low', last_updated: '2026-04-01' },
-    { id: '7', name: 'Corporate Account', type: 'corp', value: '85000', return_rate: '7.1', ytd_return: '4.8', provider: 'RBC', risk_level: 'medium', last_updated: '2026-04-15' },
-    { id: '8', name: 'RESP - Education Fund', type: 'resp', value: '18000', return_rate: '6.5', ytd_return: '3.9', provider: 'Coast Capital', risk_level: 'medium', last_updated: '2026-04-15' }
-  ]);
+  const { user } = useAuth();
+  const [investments, setInvestments] = useState<Investment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(
+      collection(db, 'investments'),
+      where('userId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const investmentData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as any[];
+      setInvestments(investmentData);
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [user]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newInvestment, setNewInvestment] = useState<Partial<Investment>>({
@@ -128,24 +144,32 @@ const InvestmentsTracker: React.FC = () => {
     ];
   };
 
-  const handleAddInvestment = () => {
-    if (!newInvestment.name || !newInvestment.value) return;
+  const handleAddInvestment = async () => {
+    if (!newInvestment.name || !newInvestment.value || !user) return;
     
-    const investment: Investment = {
-      id: Date.now().toString(),
-      ...newInvestment as Investment
-    };
-    
-    setInvestments(prev => [...prev, investment]);
-    setShowAddModal(false);
-    setNewInvestment({
-      name: '', type: 'tfsa', value: '', return_rate: '', ytd_return: '',
-      provider: '', risk_level: 'medium', last_updated: new Date().toISOString().split('T')[0]
-    });
+    try {
+      await addDoc(collection(db, 'investments'), {
+        ...newInvestment,
+        userId: user.uid,
+        createdAt: new Date().toISOString()
+      });
+      setShowAddModal(false);
+      setNewInvestment({
+        name: '', type: 'tfsa', value: '', return_rate: '', ytd_return: '',
+        provider: '', risk_level: 'medium', last_updated: new Date().toISOString().split('T')[0]
+      });
+    } catch (error) {
+      console.error("Error adding investment: ", error);
+    }
   };
 
-  const deleteInvestment = (id: string) => {
-    setInvestments(prev => prev.filter(i => i.id !== id));
+  const deleteInvestment = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this investment?')) return;
+    try {
+      await deleteDoc(doc(db, 'investments', id));
+    } catch (error) {
+      console.error("Error removing investment: ", error);
+    }
   };
 
   return (
