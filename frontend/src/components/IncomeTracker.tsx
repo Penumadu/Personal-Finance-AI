@@ -114,8 +114,9 @@ const IncomeTracker: React.FC = () => {
       }
       
       try {
+        const { id, ...sourceData } = newSource;
         await addDoc(collection(db, 'income_sources'), {
-          ...newSource,
+          ...sourceData,
           userId: user.uid,
           createdAt: new Date().toISOString()
         });
