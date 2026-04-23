@@ -123,6 +123,14 @@ const DebtPayoffPlanner: React.FC = () => {
 
   const addDebt = async () => {
     if (newDebt.name && newDebt.balance && user) {
+      if (user.isAnonymous) {
+        const id = Math.random().toString(36).substring(7);
+        setDebts([...debts, { ...newDebt, id }]);
+        setNewDebt({ id: '', name: '', balance: '', interest_rate: '', minimum_payment: '' });
+        setShowAddModal(false);
+        return;
+      }
+
       try {
         await addDoc(collection(db, 'debts'), {
           ...newDebt,
@@ -133,12 +141,19 @@ const DebtPayoffPlanner: React.FC = () => {
         setShowAddModal(false);
       } catch (error) {
         console.error("Error adding debt: ", error);
+        alert("Failed to add debt. " + (user.isAnonymous ? "Guest mode issue." : "Check permissions."));
       }
     }
   };
 
   const removeDebt = async (id: string) => {
     if (!confirm('Are you sure you want to delete this debt?')) return;
+    
+    if (user?.isAnonymous) {
+      setDebts(debts.filter(d => d.id !== id));
+      return;
+    }
+
     try {
       await deleteDoc(doc(db, 'debts', id));
     } catch (error) {

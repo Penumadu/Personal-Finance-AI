@@ -58,6 +58,15 @@ const CreditCardOptimizer: React.FC = () => {
 
   const handleAddCard = async () => {
     if (!newCard.card_name || !user) return;
+    
+    if (user.isAnonymous) {
+      const id = Math.random().toString(36).substring(7);
+      setCards([...cards, { ...newCard, id } as any]);
+      setShowAddCard(false);
+      setNewCard({ card_name: '', balance: '', apr: '', credit_limit: '' });
+      return;
+    }
+
     try {
       await addDoc(collection(db, 'credit_cards'), {
         ...newCard,
@@ -68,11 +77,18 @@ const CreditCardOptimizer: React.FC = () => {
       setNewCard({ card_name: '', balance: '', apr: '', credit_limit: '' });
     } catch (error) {
       console.error("Error adding card: ", error);
+      alert("Failed to add card. " + (user.isAnonymous ? "Guest mode issue." : "Check permissions."));
     }
   };
 
   const removeCard = async (id: string) => {
     if (!confirm('Are you sure you want to delete this card?')) return;
+    
+    if (user?.isAnonymous) {
+      setCards(cards.filter((c: any) => c.id !== id));
+      return;
+    }
+
     try {
       await deleteDoc(doc(db, 'credit_cards', id));
     } catch (error) {

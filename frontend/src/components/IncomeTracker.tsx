@@ -105,6 +105,14 @@ const IncomeTracker: React.FC = () => {
 
   const addSource = async () => {
     if (newSource.source_name && newSource.amount && user) {
+      if (user.isAnonymous) {
+        const id = Math.random().toString(36).substring(7);
+        setSources([...sources, { ...newSource, id }]);
+        setNewSource({ id: '', source_type: 'salary', source_name: '', amount: '', frequency: 'monthly' });
+        setShowAddModal(false);
+        return;
+      }
+      
       try {
         await addDoc(collection(db, 'income_sources'), {
           ...newSource,
@@ -115,12 +123,19 @@ const IncomeTracker: React.FC = () => {
         setShowAddModal(false);
       } catch (error) {
         console.error("Error adding income source: ", error);
+        alert("Failed to add income source. " + (user.isAnonymous ? "Guest mode issue." : "Check permissions."));
       }
     }
   };
 
   const removeSource = async (id: string) => {
     if (!confirm('Are you sure you want to delete this income source?')) return;
+    
+    if (user?.isAnonymous) {
+      setSources(sources.filter(s => s.id !== id));
+      return;
+    }
+
     try {
       await deleteDoc(doc(db, 'income_sources', id));
     } catch (error) {

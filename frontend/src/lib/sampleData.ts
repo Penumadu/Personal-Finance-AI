@@ -149,3 +149,22 @@ export const SAMPLE_MORTGAGES = [
     paymentFrequency: 'monthly' as const
   }
 ];
+
+export const SAMPLE_TRANSACTIONS = [
+  { id: 't1', date: new Date().toISOString().split('T')[0], description: 'Grocery Store', amount: '120.50', category: 'Food' },
+  { id: 't2', date: new Date(Date.now() - 86400000).toISOString().split('T')[0], description: 'Gas Station', amount: '45.00', category: 'Transportation' },
+  { id: 't3', date: new Date(Date.now() - 172800000).toISOString().split('T')[0], description: 'Electric Bill', amount: '95.20', category: 'Utilities' },
+  { id: 't4', date: new Date(Date.now() - 259200000).toISOString().split('T')[0], description: 'Restaurant', amount: '65.00', category: 'Food' },
+  { id: 't5', date: new Date(Date.now() - 345600000).toISOString().split('T')[0], description: 'Movie Tickets', amount: '30.00', category: 'Entertainment' },
+];
+
+export const SAMPLE_BUDGETS = [
+  { category: 'Housing', limit: '2000' },
+  { category: 'Food', limit: '600' },
+  { category: 'Transportation', limit: '400' },
+  { category: 'Utilities', limit: '300' },
+  { category: 'Entertainment', limit: '200' },
+  { category: 'Shopping', limit: '300' },
+  { category: 'Healthcare', limit: '200' },
+  { category: 'Other', limit: '200' },
+];

@@ -154,6 +154,22 @@ const InvestmentsTracker: React.FC = () => {
   const handleAddInvestment = async () => {
     if (!newInvestment.name || !newInvestment.value || !user) return;
     
+    if (user.isAnonymous) {
+      const id = Math.random().toString(36).substring(7);
+      const investment: Investment = {
+        ...(newInvestment as Investment),
+        id,
+        last_updated: new Date().toISOString().split('T')[0]
+      };
+      setInvestments([...investments, investment]);
+      setShowAddModal(false);
+      setNewInvestment({
+        name: '', type: 'tfsa', value: '', return_rate: '', ytd_return: '',
+        provider: '', risk_level: 'medium', last_updated: new Date().toISOString().split('T')[0]
+      });
+      return;
+    }
+
     try {
       await addDoc(collection(db, 'investments'), {
         ...newInvestment,
@@ -167,11 +183,18 @@ const InvestmentsTracker: React.FC = () => {
       });
     } catch (error) {
       console.error("Error adding investment: ", error);
+      alert("Failed to add investment. " + (user.isAnonymous ? "Guest mode issue." : "Check permissions."));
     }
   };
 
   const deleteInvestment = async (id: string) => {
     if (!confirm('Are you sure you want to delete this investment?')) return;
+    
+    if (user?.isAnonymous) {
+      setInvestments(investments.filter(i => i.id !== id));
+      return;
+    }
+
     try {
       await deleteDoc(doc(db, 'investments', id));
     } catch (error) {

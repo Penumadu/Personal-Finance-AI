@@ -2,9 +2,10 @@ import React from 'react';
 import { Lightbulb, TrendingDown, TrendingUp, AlertCircle, ArrowRight, Wallet, CreditCard, ShieldCheck, Zap } from 'lucide-react';
 import Card from './ui/Card';
 import { useAuth } from '../context/AuthContext';
-import { SAMPLE_INVESTMENTS, SAMPLE_INCOME, SAMPLE_CREDIT_CARDS, SAMPLE_DEBTS, SAMPLE_MORTGAGES } from '../lib/sampleData';
+import { SAMPLE_INVESTMENTS, SAMPLE_INCOME, SAMPLE_CREDIT_CARDS, SAMPLE_DEBTS, SAMPLE_MORTGAGES, SAMPLE_TRANSACTIONS, SAMPLE_BUDGETS } from '../lib/sampleData';
 import { db } from '../lib/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+
 
 interface Suggestion {
   id: string;
@@ -25,25 +26,30 @@ const AIInsights: React.FC = () => {
     income: [] as any[],
     creditCards: [] as any[],
     debts: [] as any[],
-    mortgages: [] as any[]
+    mortgages: [] as any[],
+    transactions: [] as any[],
+    budgets: [] as any[]
   });
 
   React.useEffect(() => {
     if (!user) return;
 
     if (user.isAnonymous) {
+      const savedTx = localStorage.getItem('guest_transactions');
       setData({
         investments: SAMPLE_INVESTMENTS,
         income: SAMPLE_INCOME,
         creditCards: SAMPLE_CREDIT_CARDS,
         debts: SAMPLE_DEBTS,
-        mortgages: SAMPLE_MORTGAGES
+        mortgages: SAMPLE_MORTGAGES,
+        transactions: savedTx ? JSON.parse(savedTx) : SAMPLE_TRANSACTIONS,
+        budgets: SAMPLE_BUDGETS
       });
       setLoading(false);
       return;
     }
 
-    const collections = ['investments', 'income_sources', 'credit_cards', 'debts', 'mortgages'];
+    const collections = ['investments', 'income_sources', 'credit_cards', 'debts', 'mortgages', 'transactions'];
     const unsubscribes: (() => void)[] = [];
 
     collections.forEach(colName => {
@@ -57,6 +63,9 @@ const AIInsights: React.FC = () => {
       });
       unsubscribes.push(unsub);
     });
+    
+    // Budgets are not stored in Firebase in the current implementation, using static samples
+    setData(prev => ({ ...prev, budgets: SAMPLE_BUDGETS }));
 
     setLoading(false);
     return () => unsubscribes.forEach(unsub => unsub());
@@ -100,31 +109,24 @@ const AIInsights: React.FC = () => {
       });
     }
 
-    // 3. Emergency Fund Suggestion
-    const monthlyIncome = data.income.reduce((sum, inc) => {
-        const amount = parseFloat(inc.amount || '0');
-        if (inc.frequency === 'weekly') return sum + amount * 4.33;
-        if (inc.frequency === 'biweekly') return sum + amount * 2.17;
-        if (inc.frequency === 'yearly') return sum + amount / 12;
-        return sum + amount;
-      }, 0);
-    const monthlyExpenses = monthlyIncome * 0.7; // Estimate
+    // 3. Emergency Fund Suggestion (Dynamic based on budget limits)
+    const monthlyBudgetLimit = data.budgets.reduce((sum, b) => sum + parseFloat(b.limit || '0'), 0) || 3000;
     const savings = data.investments.filter(i => i.type === 'savings').reduce((sum, i) => sum + parseFloat(i.value), 0);
     
-    if (savings < monthlyExpenses * 3) {
+    if (savings < monthlyBudgetLimit * 3) {
       suggestions.push({
         id: 'emergency-fund',
         type: 'warning',
         category: 'savings',
         title: 'Boost Emergency Fund',
-        description: `Your liquid savings ($${savings.toLocaleString()}) are below the recommended 3-6 months of expenses (~$${Math.round(monthlyExpenses * 3).toLocaleString()}).`,
+        description: `Your liquid savings ($${savings.toLocaleString()}) are below the recommended 3-6 months of expenses based on your budget (~$${Math.round(monthlyBudgetLimit * 3).toLocaleString()}).`,
         impact: 'Financial security & peace of mind',
         action: 'Set Up Automated Transfer',
         icon: ShieldCheck
       });
     }
 
-    // 4. TFSA Contribution
+    // 4. TFSA/RRSP Contribution
     const tfsa = data.investments.find(i => i.type === 'tfsa');
     if (!tfsa || parseFloat(tfsa.value) < 10000) {
       suggestions.push({
@@ -139,17 +141,56 @@ const AIInsights: React.FC = () => {
       });
     }
 
-    // 5. Debt Payoff Strategy
+    // 5. Debt Payoff Strategy (Dynamic Snowball vs Avalanche)
     if (data.debts.length > 1) {
-        suggestions.push({
-            id: 'debt-strategy',
-            type: 'success',
-            category: 'debt',
-            title: 'Optimize Debt Payoff Strategy',
-            description: 'You have multiple debts. Using the Avalanche method (highest interest first) could save you months of payments.',
-            impact: 'Be debt-free 15% faster',
-            action: 'View Payoff Plan',
-            icon: Zap
+        const balances = data.debts.map(d => parseFloat(d.balance));
+        const smallestBalance = Math.min(...balances);
+        const hasSmallBalance = smallestBalance < 1000;
+
+        if (hasSmallBalance) {
+            suggestions.push({
+                id: 'debt-strategy-snowball',
+                type: 'success',
+                category: 'debt',
+                title: 'Psychological Win: Debt Snowball',
+                description: `You have a small debt balance of $${smallestBalance}. Pay this off first (Snowball method) to build momentum before tackling larger debts.`,
+                impact: 'Quick win & motivation boost',
+                action: 'Set Up Payoff Plan',
+                icon: Zap
+            });
+        } else {
+            suggestions.push({
+                id: 'debt-strategy-avalanche',
+                type: 'success',
+                category: 'debt',
+                title: 'Optimize Debt Payoff Strategy',
+                description: 'You have multiple large debts. Using the Avalanche method (highest interest first) is mathematically optimal and could save you months of payments.',
+                impact: 'Be debt-free 15% faster',
+                action: 'View Payoff Plan',
+                icon: Zap
+            });
+        }
+    }
+
+    // 6. Budget Insights
+    if (data.transactions.length > 0 && data.budgets.length > 0) {
+        data.budgets.forEach(budget => {
+            const spent = data.transactions
+                .filter(tx => tx.category === budget.category)
+                .reduce((sum, tx) => sum + parseFloat(tx.amount), 0);
+            
+            if (spent > parseFloat(budget.limit)) {
+                suggestions.push({
+                    id: `budget-${budget.category}`,
+                    type: 'critical',
+                    category: 'savings',
+                    title: `Over Budget: ${budget.category}`,
+                    description: `You have spent $${spent.toFixed(2)} in ${budget.category}, exceeding your limit of $${budget.limit}. Consider reducing spending here next month.`,
+                    impact: `Save $${(spent - parseFloat(budget.limit)).toFixed(2)} by adhering to budget`,
+                    action: 'Review Budget',
+                    icon: AlertCircle
+                });
+            }
         });
     }
 

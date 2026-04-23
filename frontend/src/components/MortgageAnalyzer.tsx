@@ -207,6 +207,26 @@ const MortgageAnalyzer: React.FC = () => {
   const handleAddProperty = async () => {
     if (!newProperty.name || !newProperty.currentBalance || !user) return;
     
+    if (user.isAnonymous) {
+      const id = Math.random().toString(36).substring(7);
+      const property: Property = {
+        ...(newProperty as Property),
+        id,
+        renewalDate: newProperty.renewalDate || new Date().toISOString()
+      };
+      const updatedProperties = [...properties, property];
+      setProperties(updatedProperties);
+      setSelectedProperty(property);
+      setShowAddProperty(false);
+      setNewProperty({
+        name: '', address: '', propertyValue: '', currentBalance: '',
+        interestRate: '', monthlyPayment: '', originalAmount: '',
+        startDate: '', termMonths: '300', loanType: 'fixed',
+        renewalDate: '', paymentFrequency: 'monthly'
+      });
+      return;
+    }
+
     try {
       await addDoc(collection(db, 'mortgages'), {
         ...newProperty,
@@ -223,12 +243,23 @@ const MortgageAnalyzer: React.FC = () => {
       });
     } catch (error) {
       console.error("Error adding property: ", error);
+      alert("Failed to add property. " + (user.isAnonymous ? "Guest mode issue." : "Check permissions."));
     }
   };
 
   const removeProperty = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!confirm('Are you sure you want to delete this property?')) return;
+    
+    if (user?.isAnonymous) {
+      const updatedProperties = properties.filter(p => p.id !== id);
+      setProperties(updatedProperties);
+      if (selectedProperty?.id === id) {
+        setSelectedProperty(updatedProperties[0] || null);
+      }
+      return;
+    }
+
     try {
       await deleteDoc(doc(db, 'mortgages', id));
       if (selectedProperty?.id === id) {

@@ -7,11 +7,12 @@ import CreditCardOptimizer from './components/CreditCardOptimizer';
 import DebtPayoffPlanner from './components/DebtPayoffPlanner';
 import IncomeTracker from './components/IncomeTracker';
 import InvestmentsTracker from './components/InvestmentsTracker';
+import BudgetAnalyzer from './components/BudgetAnalyzer';
 import Dashboard from './components/Dashboard';
 import AIInsights from './components/AIInsights';
-import { Search, LogOut, Lightbulb } from 'lucide-react';
+import { Search, LogOut, Lightbulb, PieChart as PieChartIcon } from 'lucide-react';
 
-type Page = 'dashboard' | 'mortgage' | 'credit-card' | 'debt' | 'income' | 'investments' | 'insights';
+type Page = 'dashboard' | 'mortgage' | 'credit-card' | 'debt' | 'income' | 'investments' | 'budget' | 'insights';
 
 const AppContent: React.FC = () => {
   const { user, logout } = useAuth();
@@ -28,6 +29,7 @@ const AppContent: React.FC = () => {
     { id: 'mortgage' as Page, label: 'Mortgage', icon: TrendingUp },
     { id: 'credit-card' as Page, label: 'Credit Cards', icon: CreditCard },
     { id: 'debt' as Page, label: 'Debt Payoff', icon: Target },
+    { id: 'budget' as Page, label: 'Budget', icon: PieChartIcon },
     { id: 'investments' as Page, label: 'Investments', icon: PieChart },
     { id: 'income' as Page, label: 'Income', icon: DollarSign },
   ];
@@ -42,6 +44,8 @@ const AppContent: React.FC = () => {
         return <CreditCardOptimizer />;
       case 'debt':
         return <DebtPayoffPlanner />;
+      case 'budget':
+        return <BudgetAnalyzer />;
       case 'investments':
         return <InvestmentsTracker />;
       case 'income':
