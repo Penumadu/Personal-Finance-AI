@@ -1,0 +1,22 @@
+# Node.js
+node_modules/
+dist/
+build/
+.env
+.vercel
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+.env
+.pytest_cache/
+.coverage
+
+# IDEs
+.vscode/
+.idea/
+.DS_Store
