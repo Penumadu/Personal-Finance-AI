@@ -152,55 +152,111 @@ const MortgageAnalyzer: React.FC = () => {
   };
 
   const getRefinanceRecommendations = (property: Property) => {
-    const recommendations = [];
+    const recommendations: any[] = [];
     const currentRate = parseFloat(property.interestRate);
-    
-    // Rate comparison
-    if (currentRate > 6.0) {
+    const balance = parseFloat(property.currentBalance);
+    const marketRate = 4.85; // Current demo market rate
+    const renewalDate = new Date(property.renewalDate);
+    const monthsToRenewal = Math.max(0, Math.round((renewalDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30)));
+
+    // 1. Refinance Recommendation
+    if (currentRate > marketRate + 0.5) {
+      const monthlySavings = (balance * (currentRate - marketRate) / 100) / 12;
+      const yearlySavings = monthlySavings * 12;
+      const totalInterestSaved = monthlySavings * 60; // Estimate over a 5-year term
+      const estClosingCosts = 2500;
+
+      if (monthsToRenewal >= 6) {
+        const estimatedPenalty = Math.round(balance * 0.03);
+        const breakEvenMonths = Math.ceil((estClosingCosts + estimatedPenalty) / monthlySavings);
+
+        recommendations.push({
+          type: 'high_rate',
+          title: 'Refinance Opportunity',
+          description: `Your rate of ${currentRate}% is significantly above market (~${marketRate}%). Refinancing now could lock in lower payments for the next 5 years.`,
+          potential: Math.round(monthlySavings).toString(),
+          impactLabel: 'per month',
+          steps: [
+            'Request a payout statement to confirm your exact prepayment penalty.',
+            `Shop rates at RateHub.ca or Nesto — target ~${marketRate}% for a 5-year fixed.`,
+            `Verify break-even: With a ~$${estimatedPenalty.toLocaleString()} penalty, you need ~${breakEvenMonths} months to start saving.`,
+            'Ask for a "blend-and-extend" to potentially avoid the full penalty.'
+          ],
+          breakdown: [
+            { label: 'Monthly Savings', value: `$${Math.round(monthlySavings).toLocaleString()}` },
+            { label: 'Yearly Savings', value: `$${Math.round(yearlySavings).toLocaleString()}` },
+            { label: 'Est. Penalty', value: `$${estimatedPenalty.toLocaleString()}` },
+            { label: 'Break-Even', value: `${breakEvenMonths} months` }
+          ]
+        });
+      } else {
+        recommendations.push({
+          type: 'high_rate',
+          title: 'Immediate Renewal Strategy',
+          description: `Your mortgage renews in ${monthsToRenewal} months. This is the perfect time to switch lenders for a better rate with ZERO penalty.`,
+          potential: Math.round(monthlySavings).toString(),
+          impactLabel: 'per month',
+          steps: [
+            'Do not sign your bank\'s auto-renewal notice — it\'s rarely the best rate.',
+            'Get a rate hold today (lenders allow this 120 days before renewal).',
+            'Compare your bank\'s offer against a mortgage broker or digital lender (Nesto).',
+            'Target a rate below 4.9% for a 5-year fixed term.'
+          ],
+          breakdown: [
+            { label: 'Months to Renewal', value: `${monthsToRenewal}` },
+            { label: 'Monthly Savings', value: `$${Math.round(monthlySavings).toLocaleString()}` },
+            { label: 'Prepayment Penalty', value: '$0 (at renewal)' },
+            { label: '5-Year Savings', value: `$${Math.round(totalInterestSaved).toLocaleString()}` }
+          ]
+        });
+      }
+    }
+
+    // 2. Accelerated Payments
+    if (property.paymentFrequency === 'monthly') {
+      const acceleratedBiWeekly = parseFloat(property.monthlyPayment) / 2;
       recommendations.push({
-        type: 'high_rate',
-        title: 'Consider Refinancing',
-        description: 'Your rate is above current market. Refinancing could save significant interest.',
-        potential: ((currentRate - 5.5) * parseFloat(property.currentBalance) / 100).toFixed(0)
+        type: 'accelerate',
+        title: 'Switch to Accelerated Bi-Weekly',
+        description: 'By paying half your monthly amount every two weeks, you make one extra monthly payment per year, shaving years off your mortgage.',
+        potential: '45000',
+        impactLabel: 'interest saved',
+        steps: [
+          'Contact your lender to change your payment frequency.',
+          'Align the new payment dates with your bi-weekly paycheques.',
+          'Ensure your budget can handle the slight increase in annual total paid.'
+        ],
+        breakdown: [
+          { label: 'Extra Payment/Year', value: '1 Full Payment' },
+          { label: 'Time Saved', value: '~4.2 Years' },
+          { label: 'Total Interest Saved', value: '~$45,000+' }
+        ]
       });
     }
-    
-    // Fixed vs Variable analysis
-    if (property.loanType === 'fixed') {
-      recommendations.push({
-        type: 'variable_benefit',
-        title: 'Variable Rate Opportunity',
-        description: 'Variable rates are currently lower. Consider switching at renewal for savings.',
-        potential: ((currentRate - 4.8) * parseFloat(property.currentBalance) / 100).toFixed(0)
-      });
-    } else {
-      recommendations.push({
-        type: 'fixed_security',
-        title: 'Lock in Current Rate',
-        description: 'Consider fixing your rate before potential increases. Fixed provides peace of mind.',
-        potential: '0'
-      });
-    }
-    
-    // Equity recommendations
-    const ltv = (parseFloat(property.currentBalance) / parseFloat(property.propertyValue)) * 100;
-    if (ltv < 60) {
+
+    // 3. Equity / HELOC
+    const ltv = (balance / parseFloat(property.propertyValue)) * 100;
+    if (ltv < 65) {
+      const availableEquity = Math.round(parseFloat(property.propertyValue) * 0.8 - balance);
       recommendations.push({
         type: 'equity_access',
-        title: 'Access Home Equity',
-        description: 'You have significant equity (20%+). Consider HELOC for investments or renovations.',
-        potential: Math.round(parseFloat(property.propertyValue) * (100 - ltv) / 100).toString()
+        title: 'Strategic Equity Access',
+        description: `You have over ${Math.round(100 - ltv)}% equity. You could access up to $${availableEquity.toLocaleString()} for investments or home improvements.`,
+        potential: availableEquity.toString(),
+        impactLabel: 'available',
+        steps: [
+          'Apply for a HELOC (Home Equity Line of Credit) while interest rates are stabilizing.',
+          'Use funds only for value-adding renovations or high-return investments.',
+          'Keep the HELOC at $0 balance if not needed — it serves as a great emergency backup.'
+        ],
+        breakdown: [
+          { label: 'LTV Ratio', value: `${ltv.toFixed(1)}%` },
+          { label: 'Available Equity', value: `$${availableEquity.toLocaleString()}` },
+          { label: 'Typical HELOC Rate', value: 'Prime + 0.5%' }
+        ]
       });
     }
-    
-    // Accelerated payments
-    recommendations.push({
-      type: 'accelerate',
-      title: 'Accelerated Payments',
-      description: 'Switch to accelerated bi-weekly to pay off 4 years earlier and save $45K+ in interest.',
-      potential: '45000'
-    });
-    
+
     return recommendations;
   };
 
@@ -439,25 +495,55 @@ const MortgageAnalyzer: React.FC = () => {
 
               {/* Refinance Recommendations */}
               <Card title="Recommendations">
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {getRefinanceRecommendations(selectedProperty).map((rec, idx) => (
-                    <div key={idx} className={`p-4 rounded-lg border ${
-                      rec.type === 'high_rate' ? 'border-red-200 bg-red-50' :
-                      rec.type === 'variable_benefit' ? 'border-green-200 bg-green-50' :
-                      rec.type === 'equity_access' ? 'border-blue-200 bg-blue-50' :
-                      'border-gray-200 bg-gray-50'
+                    <div key={idx} className={`rounded-xl border-l-4 overflow-hidden shadow-sm ${
+                      rec.type === 'high_rate' ? 'border-l-red-500 bg-red-50/30' :
+                      rec.type === 'variable_benefit' ? 'border-l-green-500 bg-green-50/30' :
+                      rec.type === 'equity_access' ? 'border-l-blue-500 bg-blue-50/30' :
+                      'border-l-emerald-500 bg-emerald-50/30'
                     }`}>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900">{rec.title}</h4>
-                          <p className="text-sm text-gray-600 mt-1">{rec.description}</p>
+                      <div className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <h4 className="font-bold text-gray-900 flex items-center gap-2">
+                              {rec.type === 'high_rate' ? <TrendingDown className="w-4 h-4 text-red-500" /> : 
+                               rec.type === 'equity_access' ? <Building2 className="w-4 h-4 text-blue-500" /> :
+                               <DollarSign className="w-4 h-4 text-emerald-500" />}
+                              {rec.title}
+                            </h4>
+                            <p className="text-xs text-gray-600 mt-1 leading-relaxed">{rec.description}</p>
+                          </div>
+                          {rec.potential !== '0' && (
+                            <div className="text-right">
+                              <span className="text-lg font-black text-gray-900">${parseInt(rec.potential).toLocaleString()}</span>
+                              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter leading-none">{rec.impactLabel}</p>
+                            </div>
+                          )}
                         </div>
-                        {rec.potential !== '0' && (
-                          <span className="flex items-center gap-1 text-green-600 font-semibold">
-                            <ArrowUpRight className="w-4 h-4" />
-                            Save ${parseInt(rec.potential).toLocaleString()}
-                          </span>
-                        )}
+
+                        {/* Financial Breakdown */}
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                          {rec.breakdown.map((item: any, i: number) => (
+                            <div key={i} className="bg-white/50 px-3 py-1.5 rounded-lg border border-white/50 flex justify-between items-center">
+                              <span className="text-[10px] text-gray-500 font-medium">{item.label}</span>
+                              <span className="text-xs font-bold text-gray-800">{item.value}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Action Plan */}
+                        <div className="bg-white/60 rounded-lg p-3">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Step-by-Step Action Plan</p>
+                          <ul className="space-y-2">
+                            {rec.steps.map((step: string, i: number) => (
+                              <li key={i} className="flex items-start gap-2">
+                                <span className="mt-1 w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0" />
+                                <span className="text-xs text-gray-700 leading-tight">{step}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
                     </div>
                   ))}
