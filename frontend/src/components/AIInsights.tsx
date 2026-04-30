@@ -16,6 +16,10 @@ interface Suggestion {
   impact: string;
   action: string;
   icon: any;
+  // Rich detail fields for expanded guidance
+  steps?: string[];
+  breakdown?: { label: string; value: string; highlight?: boolean }[];
+  lenderTip?: string;
 }
 
 const AIInsights: React.FC = () => {
@@ -74,21 +78,109 @@ const AIInsights: React.FC = () => {
   const generateSuggestions = (): Suggestion[] => {
     const suggestions: Suggestion[] = [];
 
-    // 1. Mortgage Refinance Suggestion
+    // 1. Mortgage Refinance Suggestion (Detailed)
     const marketRate = 4.85; // Current demo market rate
     data.mortgages.forEach(m => {
       const currentRate = parseFloat(m.interestRate);
+      const balance = parseFloat(m.currentBalance);
+      const termMonths = parseInt(m.termMonths) || 300;
+      const renewalDate = m.renewalDate ? new Date(m.renewalDate) : null;
+      const monthsToRenewal = renewalDate
+        ? Math.max(0, Math.round((renewalDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30)))
+        : 99;
+
       if (currentRate > marketRate + 0.5) {
-        const savings = (parseFloat(m.currentBalance) * (currentRate - marketRate) / 100) / 12;
+        const monthlySavings = (balance * (currentRate - marketRate) / 100) / 12;
+        const yearlySavings = monthlySavings * 12;
+        const remainingMonths = Math.min(termMonths, 240);
+        const totalInterestSaved = monthlySavings * remainingMonths;
+        const estClosingCosts = 2500;
+        const breakEvenMonths = Math.ceil(estClosingCosts / monthlySavings);
+        const rateGap = (currentRate - marketRate).toFixed(2);
+
+        if (monthsToRenewal >= 6) {
+          const estimatedPenalty = Math.round(balance * 0.03);
+          suggestions.push({
+            id: `mortgage-${m.id}`,
+            type: 'warning',
+            category: 'mortgage',
+            title: `Refinance Opportunity: ${m.name}`,
+            description: `Your rate of ${currentRate}% is ${rateGap}% above today's market rate (~${marketRate}%). You are ${monthsToRenewal} months from renewal. Refinancing now could save you money, but involves a prepayment penalty estimated at ~$${estimatedPenalty.toLocaleString()}. Review the break-even analysis below before acting.`,
+            impact: `~$${Math.round(monthlySavings).toLocaleString()}/mo · $${Math.round(yearlySavings).toLocaleString()}/yr`,
+            action: 'Get a Rate Quote Today',
+            icon: TrendingDown,
+            steps: [
+              'Request a mortgage statement from your lender to confirm your exact prepayment penalty (IRD or 3-month interest rule).',
+              `Shop competing lenders: Try RateHub.ca, Nesto, or your bank's mortgage specialist for rates around ${marketRate}%.`,
+              `Calculate break-even: With ~$${estClosingCosts.toLocaleString()} in costs + ~$${estimatedPenalty.toLocaleString()} penalty, you need ~${Math.ceil((estClosingCosts + estimatedPenalty) / monthlySavings)} months to break even.`,
+              'Ask your current lender about a "blend-and-extend" — it lets you blend your old and new rate without a full prepayment penalty.',
+              'Lock in a fixed rate before any Bank of Canada rate increases. Consider a 3- or 5-year fixed term.'
+            ],
+            breakdown: [
+              { label: 'Current Rate', value: `${currentRate}%` },
+              { label: 'Market Rate (est.)', value: `${marketRate}%` },
+              { label: 'Monthly Savings', value: `$${Math.round(monthlySavings).toLocaleString()}`, highlight: true },
+              { label: 'Yearly Savings', value: `$${Math.round(yearlySavings).toLocaleString()}`, highlight: true },
+              { label: 'Est. Prepayment Penalty', value: `~$${estimatedPenalty.toLocaleString()}` },
+              { label: 'Closing Costs', value: `~$${estClosingCosts.toLocaleString()}` },
+              { label: 'Break-Even Period', value: `~${Math.ceil((estClosingCosts + estimatedPenalty) / monthlySavings)} months` },
+              { label: 'Net Savings (after break-even)', value: `~$${Math.round(totalInterestSaved - estClosingCosts - estimatedPenalty).toLocaleString()}`, highlight: true }
+            ],
+            lenderTip: '💡 Tip: Ask your current lender for a "blend-and-extend" — it lets you combine your old and new rate without a full prepayment penalty. A mortgage broker at Dominion Lending Centres can shop 50+ lenders for free.'
+          });
+        } else {
+          suggestions.push({
+            id: `mortgage-${m.id}`,
+            type: 'critical',
+            category: 'mortgage',
+            title: `Act Now — Renewal Approaching: ${m.name}`,
+            description: `Your mortgage renews in ${monthsToRenewal} months. Your current rate of ${currentRate}% is ${rateGap}% above market. This is the BEST time to shop — you can switch lenders with no prepayment penalty.`,
+            impact: `~$${Math.round(monthlySavings).toLocaleString()}/mo · $${Math.round(yearlySavings).toLocaleString()}/yr · ~$${Math.round(totalInterestSaved).toLocaleString()} over term`,
+            action: 'Start Rate Shopping Now',
+            icon: TrendingDown,
+            steps: [
+              'Start shopping NOW — lenders allow you to lock in a rate 120 days before renewal with no penalty.',
+              'Compare offers from at least 3 sources: your current lender, a mortgage broker (e.g., Dominion Lending), and a digital lender (e.g., Nesto, True North Mortgage).',
+              `Request written rate offers. Target ${marketRate}% or lower for a 5-year fixed.`,
+              'Review the full terms — look at prepayment privileges (10-20% extra annually?), portability, and early-break penalties.',
+              'If keeping the property long-term, choose a 5-year fixed. If you may sell in 2–3 years, consider a 3-year fixed or variable.'
+            ],
+            breakdown: [
+              { label: 'Months to Renewal', value: `${monthsToRenewal} months` },
+              { label: 'Current Rate', value: `${currentRate}%` },
+              { label: 'Target Rate', value: `${marketRate}%` },
+              { label: 'Monthly Savings', value: `$${Math.round(monthlySavings).toLocaleString()}`, highlight: true },
+              { label: 'Yearly Savings', value: `$${Math.round(yearlySavings).toLocaleString()}`, highlight: true },
+              { label: 'Prepayment Penalty', value: '✅ None (at renewal)', highlight: true },
+              { label: 'Est. Savings Over Full Term', value: `~$${Math.round(totalInterestSaved).toLocaleString()}`, highlight: true }
+            ],
+            lenderTip: '💡 Tip: A mortgage broker shops 50+ lenders for free and can often beat your bank\'s posted rate by 0.5%+. Start at RateHub.ca or call Dominion Lending Centres.'
+          });
+        }
+      } else if (monthsToRenewal <= 18) {
         suggestions.push({
-          id: `mortgage-${m.id}`,
-          type: 'warning',
+          id: `mortgage-renewal-${m.id}`,
+          type: 'info',
           category: 'mortgage',
-          title: `Refinance Opportunity: ${m.name}`,
-          description: `Your current rate is ${currentRate}%, but market rates are around ${marketRate}%. Refinancing could save you significant interest.`,
-          impact: `Save ~$${Math.round(savings)}/month`,
-          action: 'Calculate Refinance Savings',
-          icon: TrendingDown
+          title: `Plan Your Renewal: ${m.name}`,
+          description: `Your ${m.name} mortgage (${currentRate}%) renews in ~${monthsToRenewal} months. Your rate is competitive, but auto-renewing without shopping is the most common mortgage mistake Canadians make.`,
+          impact: 'Protect your rate & avoid auto-renewal hike',
+          action: 'Plan Your Renewal',
+          icon: TrendingUp,
+          steps: [
+            `Start shopping 120 days before ${m.renewalDate} — lenders allow early rate locks with no penalty.`,
+            'Your lender\'s renewal notice (~21 days before) is rarely their best offer. Never sign without comparing.',
+            'Use RateHub.ca or a mortgage broker to benchmark your lender\'s offer.',
+            'Call your lender\'s retention team and use competing quotes as negotiating leverage.',
+            'Decide on your term: 5-year fixed for stability; variable if you expect rates to fall.'
+          ],
+          breakdown: [
+            { label: 'Current Rate', value: `${currentRate}%` },
+            { label: 'Market Rate (est.)', value: `${marketRate}%` },
+            { label: 'Months to Renewal', value: `${monthsToRenewal}` },
+            { label: 'Remaining Balance', value: `$${balance.toLocaleString()}` }
+          ],
+          lenderTip: '💡 Tip: Even negotiating 0.1% off your rate saves thousands over a 5-year term on a $500K mortgage.'
         });
       }
     });
@@ -247,6 +339,54 @@ const AIInsights: React.FC = () => {
                   <p className="text-sm text-gray-600 mt-2 leading-relaxed">
                     {suggestion.description}
                   </p>
+
+                  {/* Financial Breakdown Table */}
+                  {suggestion.breakdown && suggestion.breakdown.length > 0 && (
+                    <div className="mt-4 rounded-lg overflow-hidden border border-gray-100">
+                      <div className="bg-gray-50 px-3 py-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Financial Breakdown</span>
+                      </div>
+                      <div className="divide-y divide-gray-100">
+                        {suggestion.breakdown.map((row, i) => (
+                          <div key={i} className={`flex items-center justify-between px-3 py-2 ${
+                            row.highlight ? 'bg-emerald-50' : 'bg-white'
+                          }`}>
+                            <span className="text-xs text-gray-500">{row.label}</span>
+                            <span className={`text-xs font-bold ${
+                              row.highlight ? 'text-emerald-700' : 'text-gray-800'
+                            }`}>{row.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step-by-step Action Plan */}
+                  {suggestion.steps && suggestion.steps.length > 0 && (
+                    <div className="mt-4">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Your Action Plan</span>
+                      <ol className="mt-2 space-y-2">
+                        {suggestion.steps.map((step, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className={`mt-0.5 shrink-0 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${
+                              suggestion.type === 'critical' ? 'bg-red-100 text-red-700' :
+                              suggestion.type === 'warning' ? 'bg-amber-100 text-amber-700' :
+                              'bg-blue-100 text-blue-700'
+                            }`}>{i + 1}</span>
+                            <span className="text-xs text-gray-600 leading-relaxed">{step}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+
+                  {/* Lender Tip */}
+                  {suggestion.lenderTip && (
+                    <div className="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                      <p className="text-xs text-blue-700 leading-relaxed">{suggestion.lenderTip}</p>
+                    </div>
+                  )}
+
                   <div className="mt-4 pt-4 border-t border-gray-100">
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-xs font-semibold text-gray-400">Potential Impact</span>

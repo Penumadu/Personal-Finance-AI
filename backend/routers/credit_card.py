@@ -1,7 +1,7 @@
 """
 Credit Card Optimizer API Router
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from services.credit_card_service import CreditCardService
@@ -63,3 +63,14 @@ async def calculate_rewards(
         rewards_rate=rewards_rate,
         annual_fee=annual_fee
     )
+
+@router.post("/upload-statement")
+async def upload_statement(files: List[UploadFile] = File(...)):
+    """Upload and parse credit card statements."""
+    all_transactions = []
+    for file in files:
+        content = await file.read()
+        transactions = card_service.parse_statement(content, file.filename)
+        all_transactions.extend(transactions)
+    
+    return {"transactions": all_transactions}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { PieChart as PieChartIcon, Tag, AlertTriangle, Plus, X, DollarSign, TrendingDown } from 'lucide-react';
+import { PieChart as PieChartIcon, Tag, AlertTriangle, Plus, X, DollarSign, TrendingDown, FileUp, Loader2, Check, AlertCircle } from 'lucide-react';
 import Card from './ui/Card';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
@@ -46,6 +46,12 @@ const BudgetAnalyzer: React.FC = () => {
 
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editLimitValue, setEditLimitValue] = useState<string>('');
+
+  // Import State
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [importedTransactions, setImportedTransactions] = useState<Transaction[]>([]);
+  const [importStep, setImportStep] = useState<'upload' | 'review'>('upload');
 
   useEffect(() => {
     if (!user) return;
@@ -149,6 +155,70 @@ const BudgetAnalyzer: React.FC = () => {
     }
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      formData.append('files', files[i]);
+    }
+
+    try {
+      const response = await fetch('http://localhost:8000/api/v1/cards/upload-statement', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Upload failed');
+
+      const data = await response.json();
+      setImportedTransactions(data.transactions);
+      setImportStep('review');
+    } catch (error) {
+      console.error('Error uploading:', error);
+      alert('Failed to upload and parse statements. Please ensure the backend is running and the file is a valid CSV.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const confirmImport = async () => {
+    if (!user || importedTransactions.length === 0) return;
+
+    setLoading(true);
+    try {
+      if (user.isAnonymous) {
+        const updatedTx = [...importedTransactions, ...transactions];
+        setTransactions(updatedTx);
+        localStorage.setItem('guest_transactions', JSON.stringify(updatedTx));
+      } else {
+        // Add each transaction to Firestore
+        const promises = importedTransactions.map(tx => 
+          addDoc(collection(db, 'transactions'), {
+            date: tx.date,
+            description: tx.description,
+            amount: tx.amount.toString(),
+            category: tx.category,
+            userId: user.uid,
+            createdAt: new Date().toISOString()
+          })
+        );
+        await Promise.all(promises);
+      }
+      setShowImportModal(false);
+      setImportedTransactions([]);
+      setImportStep('upload');
+      alert(`Successfully imported ${importedTransactions.length} transactions!`);
+    } catch (error) {
+      console.error('Error importing:', error);
+      alert('Failed to import transactions.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const totalMortgagePayment = mortgages.reduce((sum, m) => sum + parseFloat(m.monthlyPayment || '0'), 0);
   const totalSpent = transactions.reduce((sum, tx) => sum + parseFloat(tx.amount), 0) + totalMortgagePayment;
   const totalBudget = budgets.reduce((sum, b) => sum + parseFloat(b.limit), 0);
@@ -183,10 +253,22 @@ const BudgetAnalyzer: React.FC = () => {
             <p className="text-xs sm:text-sm text-gray-500">Track spending and manage budgets</p>
           </div>
         </div>
-        <button onClick={() => setShowAddTx(true)} className="w-full sm:w-auto px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2">
-          <Plus className="w-4 h-4" />
-          Add Expense
-        </button>
+        <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+          <button 
+            onClick={() => setShowImportModal(true)} 
+            className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+          >
+            <FileUp className="w-4 h-4" />
+            Upload Statements
+          </button>
+          <button 
+            onClick={() => setShowAddTx(true)} 
+            className="w-full sm:w-auto px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add Expense
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-2 sm:gap-4 border-b border-gray-200 pb-2 overflow-x-auto no-scrollbar whitespace-nowrap">
@@ -415,7 +497,142 @@ const BudgetAnalyzer: React.FC = () => {
           </div>
         </div>
       )}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Import Credit Card Statements</h3>
+                <p className="text-sm text-gray-500">Upload CSV files to automatically categorize transactions</p>
+              </div>
+              <button onClick={() => setShowImportModal(false)} className="text-gray-400 hover:text-gray-600 p-2">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {importStep === 'upload' ? (
+                <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 rounded-2xl bg-gray-50">
+                  <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
+                    {isUploading ? (
+                      <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+                    ) : (
+                      <FileUp className="w-8 h-8 text-emerald-600" />
+                    )}
+                  </div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                    {isUploading ? 'Parsing your statements...' : 'Select CSV Files'}
+                  </h4>
+                  <p className="text-sm text-gray-500 mb-6 text-center max-w-xs">
+                    Supported formats: Typical bank CSV exports with Date, Description, and Amount columns.
+                  </p>
+                  <label className={`px-6 py-3 rounded-lg font-bold transition-all cursor-pointer ${isUploading ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg hover:shadow-emerald-200'}`}>
+                    {isUploading ? 'Please wait...' : 'Choose Files'}
+                    <input 
+                      type="file" 
+                      multiple 
+                      accept=".csv" 
+                      className="hidden" 
+                      onChange={handleFileUpload}
+                      disabled={isUploading}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-lg flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <Check className="w-5 h-5 text-emerald-600" />
+                      <p className="text-sm text-emerald-800">
+                        Found <strong>{importedTransactions.length}</strong> transactions.
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-emerald-600 font-medium uppercase tracking-wider">Total Amount</p>
+                      <p className="text-xl font-bold text-emerald-900">
+                        ${importedTransactions.reduce((sum, tx) => sum + parseFloat(tx.amount.toString()), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {CATEGORIES.map(cat => {
+                      const catTotal = importedTransactions
+                        .filter(tx => tx.category === cat)
+                        .reduce((sum, tx) => sum + parseFloat(tx.amount.toString()), 0);
+                      if (catTotal === 0) return null;
+                      return (
+                        <div key={cat} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                          <p className="text-[10px] text-gray-500 uppercase font-bold">{cat}</p>
+                          <p className="text-sm font-bold text-gray-900">${catTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="py-3 px-4 font-semibold text-xs text-gray-600 uppercase">Date</th>
+                          <th className="py-3 px-4 font-semibold text-xs text-gray-600 uppercase">Description</th>
+                          <th className="py-3 px-4 font-semibold text-xs text-gray-600 uppercase">Category</th>
+                          <th className="py-3 px-4 font-semibold text-xs text-gray-600 uppercase text-right">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importedTransactions.map((tx, idx) => (
+                          <tr key={tx.id} className="border-t border-gray-100 hover:bg-gray-50">
+                            <td className="py-3 px-4 text-sm text-gray-600">{tx.date}</td>
+                            <td className="py-3 px-4 text-sm font-medium text-gray-900 truncate max-w-[200px]">{tx.description}</td>
+                            <td className="py-3 px-4 text-sm">
+                              <select 
+                                value={tx.category} 
+                                onChange={(e) => {
+                                  const updated = [...importedTransactions];
+                                  updated[idx].category = e.target.value;
+                                  setImportedTransactions(updated);
+                                }}
+                                className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-xs"
+                              >
+                                {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                              </select>
+                            </td>
+                            <td className="py-3 px-4 text-sm font-bold text-gray-900 text-right">${parseFloat(tx.amount).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-gray-100 flex justify-between gap-4">
+              <button 
+                onClick={() => {
+                  setImportStep('upload');
+                  setImportedTransactions([]);
+                }} 
+                className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
+              >
+                {importStep === 'review' ? 'Back' : 'Cancel'}
+              </button>
+              {importStep === 'review' && (
+                <button 
+                  onClick={confirmImport} 
+                  className="px-6 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-all shadow-lg hover:shadow-emerald-200"
+                >
+                  Import {importedTransactions.length} Transactions
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+
   );
 };
 

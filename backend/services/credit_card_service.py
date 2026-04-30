@@ -2,6 +2,15 @@
 Credit Card Optimization Service
 """
 from typing import List, Dict, Any, Optional
+import pandas as pd
+import io
+import re
+import os
+from datetime import datetime
+import google.generativeai as genai
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class CreditCardService:
     
@@ -159,3 +168,132 @@ class CreditCardService:
             return 999999
         total_paid = payment * months
         return max(0, total_paid - balance)
+
+    def parse_statement(self, file_content: bytes, filename: str) -> List[Dict[str, Any]]:
+        """Parse credit card statement CSV with robust column detection."""
+        try:
+            # Decode content
+            content_str = file_content.decode('utf-8')
+            df = pd.read_csv(io.StringIO(content_str))
+            
+            # Robust Column Detection
+            columns = df.columns.tolist()
+            
+            # Define common patterns for columns
+            date_patterns = ['date', 'day', 'time']
+            desc_patterns = ['desc', 'merchant', 'transaction', 'name', 'details', 'payee']
+            amount_patterns = ['amount', 'price', 'debit', 'value', 'cost', 'charge']
+            
+            def find_col(patterns):
+                for p in patterns:
+                    match = next((c for c in columns if p in c.lower()), None)
+                    if match: return match
+                return None
+
+            date_col = find_col(date_patterns)
+            desc_col = find_col(desc_patterns)
+            amount_col = find_col(amount_patterns)
+            
+            # Fallback to index if detection fails
+            if not date_col: date_col = columns[0]
+            if not desc_col: desc_col = columns[1] if len(columns) > 1 else columns[0]
+            if not amount_col: amount_col = next((c for c in columns if any(p in c.lower() for p in ['amt', 'bal', 'total'])), columns[-1])
+
+            transactions = []
+            for idx, row in df.iterrows():
+                try:
+                    desc = str(row[desc_col])
+                    
+                    # Clean and parse amount
+                    amount_val = str(row[amount_col])
+                    amount_val = re.sub(r'[^\d.-]', '', amount_val) # Keep only numbers, dots, and minus signs
+                    
+                    if not amount_val or amount_val == '-': continue
+                    
+                    amount = float(amount_val)
+                    date = str(row[date_col])
+                    
+                    # Skip typical payments/credits
+                    desc_lower = desc.lower()
+                    is_payment = any(k in desc_lower for k in ['payment', 'thank you', 'credit card pmnt', 'online pmt', 'autopay'])
+                    is_credit = ('credit' in desc_lower and 'card' not in desc_lower) or amount < 0
+                    
+                    # Exception for rent/mortgage payments
+                    if (is_payment or is_credit) and not any(k in desc_lower for k in ['rent', 'mortgage', 'lease']):
+                        continue
+                        
+                    transactions.append({
+                        "id": f"import_{int(datetime.now().timestamp())}_{idx}",
+                        "date": date,
+                        "description": desc,
+                        "amount": abs(amount),
+                        "category": "Other" # Categorization done in bulk later
+                    })
+                except Exception as e:
+                    print(f"Row parsing error: {e}")
+                    continue
+            
+            # Batch categorize transactions
+            return self.batch_categorize(transactions)
+            
+        except Exception as e:
+            print(f"Error parsing statement: {e}")
+            return []
+
+    def batch_categorize(self, transactions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Categorize a list of transactions using AI or Smart Heuristics."""
+        api_key = os.getenv("GOOGLE_API_KEY")
+        
+        if api_key:
+            try:
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel('gemini-pro')
+                
+                # Prepare prompt
+                tx_list = [f"{t['description']} (${t['amount']})" for t in transactions]
+                prompt = f"""
+                Categorize these credit card transactions into one of these categories:
+                Housing, Transportation, Food, Healthcare, Entertainment, Shopping, Utilities, Other
+                
+                Transactions:
+                {', '.join(tx_list)}
+                
+                Return ONLY a JSON list of category names in the same order.
+                Example: ["Food", "Shopping", "Other"]
+                """
+                
+                response = model.generate_content(prompt)
+                categories = re.findall(r'"([^"]*)"', response.text)
+                
+                if len(categories) == len(transactions):
+                    for i in range(len(transactions)):
+                        transactions[i]['category'] = categories[i] if categories[i] in ['Housing', 'Transportation', 'Food', 'Healthcare', 'Entertainment', 'Shopping', 'Utilities', 'Other'] else 'Other'
+                    return transactions
+            except Exception as e:
+                print(f"Gemini AI error, falling back to heuristics: {e}")
+
+        # Fallback to Smart Heuristics
+        for tx in transactions:
+            tx['category'] = self.categorize_transaction(tx['description'])
+        return transactions
+
+    def categorize_transaction(self, description: str) -> str:
+        """Enhanced Smart Heuristics categorization."""
+        desc = description.lower()
+        
+        # Comprehensive Keyword Map
+        cat_map = {
+            'Housing': ['rent', 'mortgage', 'lease', 'home depot', 'lowes', 'ikea', 'sherwin', 'zillow', 'apartments', 'storage'],
+            'Transportation': ['uber', 'lyft', 'gas', 'shell', 'exxon', 'chevron', 'parking', 'transit', 'train', 'bus', 'delta', 'united', 'airline', 'hertz', 'enterprise', 'tesla', 'chevrolet', 'ford', 'toyota', 'honda', 'nissan', 'bmw', 'mercedes', 'auto', 'tire', 'garage', 'speedway', 'wawa', '7-eleven', 'valero', 'bp', 'mobil', 'arco', 'sunoco'],
+            'Food': ['restaurant', 'cafe', 'grocery', 'kroger', 'whole foods', 'starbucks', 'mcdonald', 'taco bell', 'subway', 'door dash', 'ubereats', 'publix', 'safeway', 'walmart', 'aldi', 'trader joe', 'costco', 'dunkin', 'chipotle', 'chick-fil-a', 'domino', 'pizza', 'grubhub', 'instacart', 'winndixie', 'target', 'sprouts', 'wegman', 'harris teeter', 'bakery', 'steak', 'grill', 'bistro', 'pub', 'bar', 'sushi', 'thai', 'italian', 'chinese', 'mexican'],
+            'Healthcare': ['pharmacy', 'cvs', 'walgreens', 'doctor', 'hospital', 'medical', 'dental', 'vision', 'blue cross', 'aetna', 'cigna', 'unitedhealthcare', 'dentist', 'physician', 'clinic', 'urgent care', 'rite aid', 'health', 'fitness', 'gym', 'planet fitness', 'yoga', 'crossfit'],
+            'Entertainment': ['netflix', 'spotify', 'cinema', 'movie', 'game', 'nintendo', 'playstation', 'xbox', 'hulu', 'disney+', 'amc', 'regal', 'steam', 'epic games', 'twitch', 'ticketmaster', 'stubhub', 'zoo', 'museum', 'concert', 'theater', 'paramount', 'hbo', 'apple tv', 'audible', 'kindle', 'roblox'],
+            'Shopping': ['amazon', 'target', 'best buy', 'clothing', 'nike', 'adidas', 'apple', 'macys', 'nordstrom', 'walmart', 'ebay', 'etsy', 'kohls', 'gap', 'old navy', 'banana republic', 'jcrew', 'zara', 'h&m', 'sephora', 'ulta', 'marshalls', 'tj maxx', 'ross', 'dick', 'lululemon', 'patagonia', 'north face', 'rei', 'microsoft', 'dell', 'hp', 'samsung'],
+            'Utilities': ['electric', 'water', 'gas', 'internet', 'comcast', 'at&t', 'verizon', 't-mobile', 'utility', 'con ed', 'pg&e', 'spectrum', 'cox', 'xfinity', 'dish', 'directv', 'garbage', 'sewer', 'google fiber', 'mint mobile', 'boost mobile', 'cricket'],
+        }
+        
+        for category, keywords in cat_map.items():
+            if any(k in desc for k in keywords):
+                return category
+                
+        return 'Other'
